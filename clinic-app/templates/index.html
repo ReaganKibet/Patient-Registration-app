@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Patient Registration - Pediatric Therapy Clinic</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Patient Registration</h1>
+            <p>Pediatric Therapy Clinic</p>
+        </header>
+
+        <!-- Flash messages for validation errors -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <div class="flash-messages">
+                    {% for category, message in messages %}
+                        <div class="flash flash-{{ category }}">{{ message }}</div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
+
+        <main>
+            <form action="{{ url_for('submit') }}" method="POST" class="patient-form">
+                <div class="form-group">
+                    <label for="first_name">Patient First Name *</label>
+                    <input 
+                        type="text" 
+                        id="first_name" 
+                        name="first_name" 
+                        value="{{ request.form.first_name if request.form.first_name else '' }}"
+                        required
+                    >
+                </div>
+
+                <div class="form-group">
+                    <label for="last_name">Patient Last Name *</label>
+                    <input 
+                        type="text" 
+                        id="last_name" 
+                        name="last_name" 
+                        value="{{ request.form.last_name if request.form.last_name else '' }}"
+                        required
+                    >
+                </div>
+
+                <div class="form-group">
+                    <label for="date_of_birth">Date of Birth *</label>
+                    <input 
+                        type="date" 
+                        id="date_of_birth" 
+                        name="date_of_birth" 
+                        value="{{ request.form.date_of_birth if request.form.date_of_birth else '' }}"
+                        required
+                    >
+                </div>
+
+                <div class="form-group">
+                    <label for="therapist_name">Therapist Name *</label>
+                    <input 
+                        type="text" 
+                        id="therapist_name" 
+                        name="therapist_name" 
+                        value="{{ request.form.therapist_name if request.form.therapist_name else '' }}"
+                        required
+                    >
+                </div>
+
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary">Register Patient</button>
+                </div>
+            </form>
+        </main>
+    </div>
+</body>
+</html>

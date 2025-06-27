@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Registration Confirmed - Pediatric Therapy Clinic</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Registration Confirmed</h1>
+            <p>Pediatric Therapy Clinic</p>
+        </header>
+
+        <main>
+            <div class="confirmation-card">
+                <div class="success-icon">✓</div>
+                
+                <h2>Patient Successfully Registered</h2>
+                
+                <div class="patient-details">
+                    <div class="detail-row">
+                        <span class="label">Patient Name:</span>
+                        <span class="value">{{ patient.first_name }} {{ patient.last_name }}</span>
+                    </div>
+                    
+                    <div class="detail-row">
+                        <span class="label">Date of Birth:</span>
+                        <span class="value">{{ patient.date_of_birth }}</span>
+                    </div>
+                    
+                    <div class="detail-row">
+                        <span class="label">Assigned Therapist:</span>
+                        <span class="value">{{ patient.therapist_name }}</span>
+                    </div>
+                    
+                    <div class="detail-row">
+                        <span class="label">Registration Time:</span>
+                        <span class="value">{{ patient.created_at }}</span>
+                    </div>
+                </div>
+                
+                <div class="actions">
+                    <a href="{{ url_for('index') }}" class="btn btn-primary">Register Another Patient</a>
+                </div>
+            </div>
+        </main>
+    </div>
+</body>
+</html>
