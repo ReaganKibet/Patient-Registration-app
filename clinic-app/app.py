@@ -1,29 +1,54 @@
 from flask import Flask, render_template, request, redirect, url_for, flash
 import sqlite3
+import psycopg2
 from datetime import datetime
 import os
+from urllib.parse import urlparse
 
-app = Flask('Patient Registration App')
-app.secret_key = 'your-secret-key-change-in-production'
+app = Flask(__name__)
+app.secret_key = os.environ.get('SECRET_KEY', 'dev-secret-key-change-in-production')
 
-# Database configuration
-DATABASE = 'clinic.db'
+# Database configuration - support both SQLite (local) and PostgreSQL (production)
+DATABASE_URL = os.environ.get('DATABASE_URL')
+
+def get_db_connection():
+    """Get database connection - PostgreSQL in production, SQLite locally"""
+    if DATABASE_URL:
+        # Production - PostgreSQL
+        return psycopg2.connect(DATABASE_URL)
+    else:
+        # Local development - SQLite  
+        return sqlite3.connect('clinic.db')
 
 def init_db():
     """Initialize the database with required tables"""
-    conn = sqlite3.connect(DATABASE)
+    conn = get_db_connection()
     cursor = conn.cursor()
     
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS patients (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            first_name TEXT NOT NULL,
-            last_name TEXT NOT NULL,
-            date_of_birth DATE NOT NULL,
-            therapist_name TEXT NOT NULL,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )
-    ''')
+    if DATABASE_URL:
+        # PostgreSQL syntax
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS patients (
+                id SERIAL PRIMARY KEY,
+                first_name VARCHAR(100) NOT NULL,
+                last_name VARCHAR(100) NOT NULL,
+                date_of_birth DATE NOT NULL,
+                therapist_name VARCHAR(100) NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        ''')
+    else:
+        # SQLite syntax
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS patients (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                first_name TEXT NOT NULL,
+                last_name TEXT NOT NULL,
+                date_of_birth DATE NOT NULL,
+                therapist_name TEXT NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        ''')
     
     conn.commit()
     conn.close()
@@ -80,15 +105,24 @@ def submit():
     
     try:
         # Store in database
-        conn = sqlite3.connect(DATABASE)
+        conn = get_db_connection()
         cursor = conn.cursor()
         
         cursor.execute('''
             INSERT INTO patients (first_name, last_name, date_of_birth, therapist_name)
+            VALUES (%s, %s, %s, %s)
+        ''' if DATABASE_URL else '''
+            INSERT INTO patients (first_name, last_name, date_of_birth, therapist_name)
             VALUES (?, ?, ?, ?)
         ''', (first_name, last_name, date_of_birth, therapist_name))
         
-        patient_id = cursor.lastrowid
+        if DATABASE_URL:
+            patient_id = cursor.fetchone()[0] if cursor.rowcount > 0 else None
+            cursor.execute('SELECT lastval()')
+            patient_id = cursor.fetchone()[0]
+        else:
+            patient_id = cursor.lastrowid
+            
         conn.commit()
         conn.close()
         
@@ -103,10 +137,13 @@ def submit():
 def confirmation(patient_id):
     """Display confirmation page with patient information"""
     try:
-        conn = sqlite3.connect(DATABASE)
+        conn = get_db_connection()
         cursor = conn.cursor()
         
         cursor.execute('''
+            SELECT first_name, last_name, date_of_birth, therapist_name, created_at
+            FROM patients WHERE id = %s
+        ''' if DATABASE_URL else '''
             SELECT first_name, last_name, date_of_birth, therapist_name, created_at
             FROM patients WHERE id = ?
         ''', (patient_id,))
