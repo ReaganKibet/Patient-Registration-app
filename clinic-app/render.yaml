@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: clinic-app
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn app:app
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.9.16
+      - key: SECRET_KEY
+        generateValue: true
+  
+  - type: pserv
+    name: clinic-db
+    env: docker
+    plan: free
