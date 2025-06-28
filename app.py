@@ -1,6 +1,6 @@
 from flask import Flask, render_template, request, redirect, url_for, flash
 import sqlite3
-import psycopg2  # ✅ Fixed import
+import psycopg  # instead of psycopg2
 from datetime import datetime
 import os
 from urllib.parse import urlparse
@@ -15,7 +15,7 @@ def get_db_connection():
     """Get database connection - PostgreSQL in production, SQLite locally"""
     if DATABASE_URL:
         # Production - PostgreSQL
-        return psycopg2.connect(DATABASE_URL)
+        return psycopg.connect(DATABASE_URL)
     else:
         # Local development - SQLite  
         return sqlite3.connect('clinic.db')
