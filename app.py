@@ -177,10 +177,10 @@ def confirmation_simple():
     """Simple confirmation page for testing"""
     return render_template('confirmation.html', patient=None)
 
+# Initialize database on app startup (both development and production)
+init_db()
+
 if __name__ == '__main__':
-    # Initialize database on startup
-    init_db()
-    
     # Configure for production deployment
     port = int(os.environ.get('PORT', 5000))
     debug = os.environ.get('FLASK_ENV') != 'production'
