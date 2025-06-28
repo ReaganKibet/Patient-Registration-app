@@ -1,6 +1,6 @@
 from flask import Flask, render_template, request, redirect, url_for, flash
 import sqlite3
-import psycopg as psycopg2
+import psycopg2  # ✅ Fixed import
 from datetime import datetime
 import os
 from urllib.parse import urlparse
@@ -108,19 +108,19 @@ def submit():
         conn = get_db_connection()
         cursor = conn.cursor()
         
-        cursor.execute('''
-            INSERT INTO patients (first_name, last_name, date_of_birth, therapist_name)
-            VALUES (%s, %s, %s, %s)
-        ''' if DATABASE_URL else '''
-            INSERT INTO patients (first_name, last_name, date_of_birth, therapist_name)
-            VALUES (?, ?, ?, ?)
-        ''', (first_name, last_name, date_of_birth, therapist_name))
-        
         if DATABASE_URL:
-            patient_id = cursor.fetchone()[0] if cursor.rowcount > 0 else None
-            cursor.execute('SELECT lastval()')
+            # PostgreSQL - use RETURNING to get the ID
+            cursor.execute('''
+                INSERT INTO patients (first_name, last_name, date_of_birth, therapist_name)
+                VALUES (%s, %s, %s, %s) RETURNING id
+            ''', (first_name, last_name, date_of_birth, therapist_name))
             patient_id = cursor.fetchone()[0]
         else:
+            # SQLite - use lastrowid
+            cursor.execute('''
+                INSERT INTO patients (first_name, last_name, date_of_birth, therapist_name)
+                VALUES (?, ?, ?, ?)
+            ''', (first_name, last_name, date_of_birth, therapist_name))
             patient_id = cursor.lastrowid
             
         conn.commit()
@@ -130,6 +130,7 @@ def submit():
         return redirect(url_for('confirmation', patient_id=patient_id))
         
     except Exception as e:
+        print(f"Database error: {e}")  # ✅ Added logging
         flash('An error occurred while saving the patient information', 'error')
         return redirect(url_for('index'))
 
@@ -166,8 +167,15 @@ def confirmation(patient_id):
         return render_template('confirmation.html', patient=patient_data)
         
     except Exception as e:
+        print(f"Confirmation error: {e}")  # ✅ Added logging
         flash('An error occurred while retrieving patient information', 'error')
         return redirect(url_for('index'))
+
+# ✅ Add a simple confirmation route without ID for testing
+@app.route('/confirmation')
+def confirmation_simple():
+    """Simple confirmation page for testing"""
+    return render_template('confirmation.html', patient=None)
 
 if __name__ == '__main__':
     # Initialize database on startup
