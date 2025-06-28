@@ -5,6 +5,27 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Registration Confirmed - Pediatric Therapy Clinic</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <style>
+        .flash-messages {
+            margin-bottom: 20px;
+        }
+        .flash-message {
+            padding: 10px;
+            margin: 5px 0;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+        .flash-error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .flash-success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+    </style>
 </head>
 <body>
     <div class="container">
@@ -14,37 +35,63 @@
         </header>
 
         <main>
-            <div class="confirmation-card">
-                <div class="success-icon">✓</div>
-                
-                <h2>Patient Successfully Registered</h2>
-                
-                <div class="patient-details">
-                    <div class="detail-row">
-                        <span class="label">Patient Name:</span>
-                        <span class="value">{{ patient.first_name }} {{ patient.last_name }}</span>
+            <!-- Display flash messages if any -->
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    <div class="flash-messages">
+                        {% for category, message in messages %}
+                            <div class="flash-message flash-{{ category }}">{{ message }}</div>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            {% endwith %}
+
+            {% if patient %}
+                <!-- Show patient details if data is available -->
+                <div class="confirmation-card">
+                    <div class="success-icon">✓</div>
+                    
+                    <h2>Patient Successfully Registered</h2>
+                    
+                    <div class="patient-details">
+                        <div class="detail-row">
+                            <span class="label">Patient Name:</span>
+                            <span class="value">{{ patient.first_name }} {{ patient.last_name }}</span>
+                        </div>
+                        
+                        <div class="detail-row">
+                            <span class="label">Date of Birth:</span>
+                            <span class="value">{{ patient.date_of_birth }}</span>
+                        </div>
+                        
+                        <div class="detail-row">
+                            <span class="label">Assigned Therapist:</span>
+                            <span class="value">{{ patient.therapist_name }}</span>
+                        </div>
+                        
+                        <div class="detail-row">
+                            <span class="label">Registration Time:</span>
+                            <span class="value">{{ patient.created_at }}</span>
+                        </div>
                     </div>
                     
-                    <div class="detail-row">
-                        <span class="label">Date of Birth:</span>
-                        <span class="value">{{ patient.date_of_birth }}</span>
-                    </div>
-                    
-                    <div class="detail-row">
-                        <span class="label">Assigned Therapist:</span>
-                        <span class="value">{{ patient.therapist_name }}</span>
-                    </div>
-                    
-                    <div class="detail-row">
-                        <span class="label">Registration Time:</span>
-                        <span class="value">{{ patient.created_at }}</span>
+                    <div class="actions">
+                        <a href="{{ url_for('index') }}" class="btn btn-primary">Register Another Patient</a>
                     </div>
                 </div>
-                
-                <div class="actions">
-                    <a href="{{ url_for('index') }}" class="btn btn-primary">Register Another Patient</a>
+            {% else %}
+                <!-- Fallback if no patient data is available -->
+                <div class="confirmation-card">
+                    <div class="success-icon">✓</div>
+                    
+                    <h2>Registration Successful</h2>
+                    <p>Your patient information has been saved successfully.</p>
+                    
+                    <div class="actions">
+                        <a href="{{ url_for('index') }}" class="btn btn-primary">Register Another Patient</a>
+                    </div>
                 </div>
-            </div>
+            {% endif %}
         </main>
     </div>
 </body>
