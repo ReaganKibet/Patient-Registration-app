@@ -1,6 +1,6 @@
 from flask import Flask, render_template, request, redirect, url_for, flash
 import sqlite3
-import psycopg2
+import psycopg as psycopg2
 from datetime import datetime
 import os
 from urllib.parse import urlparse
