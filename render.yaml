@@ -3,12 +3,17 @@ services:
     name: clinic-app
     env: python
     buildCommand: pip install -r requirements.txt
-    startCommand: gunicorn app:app
+    startCommand: gunicorn -b 0.0.0.0:$PORT app:app
     envVars:
       - key: PYTHON_VERSION
         value: 3.9.16
       - key: SECRET_KEY
         generateValue: true
+      - key: DATABASE_URL
+        fromService:
+          type: pserv
+          name: clinic-db
+          property: connectionString
   
   - type: pserv
     name: clinic-db
