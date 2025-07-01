@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Therapist Dashboard - Pediatric Therapy Clinic</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container dashboard-container">
+        <header class="dashboard-header">
+            <div class="header-content">
+                <div class="header-info">
+                    <h1>Therapist Dashboard</h1>
+                    <p>Welcome, {{ therapist.full_name }}!</p>
+                </div>
+                <div class="header-actions">
+                    <a href="{{ url_for('logout') }}" class="btn btn-secondary">Logout</a>
+                </div>
+            </div>
+        </header>
+
+        <!-- Flash messages -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <div class="flash-messages">
+                    {% for category, message in messages %}
+                        <div class="flash flash-{{ category }}">{{ message }}</div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
+
+        <main>
+            <!-- Quick Stats -->
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-number">{{ total_patients }}</div>
+                    <div class="stat-label">Total Patients</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">{{ patients|length }}</div>
+                    <div class="stat-label">Recent Registrations</div>
+                </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="action-buttons">
+                <a href="{{ url_for('index') }}" class="btn btn-primary">Register New Patient</a>
+                <a href="{{ url_for('register_therapist') }}" class="btn btn-outline">Add New Therapist</a>
+            </div>
+
+            <!-- Patients Table -->
+            <div class="patients-section">
+                <h2>Your Patients</h2>
+                
+                {% if patients %}
+                    <div class="patients-table-container">
+                        <table class="patients-table">
+                            <thead>
+                                <tr>
+                                    <th>Patient Name</th>
+                                    <th>Date of Birth</th>
+                                    <th>Registration Date</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for patient in patients %}
+                                <tr>
+                                    <td>
+                                        <div class="patient-name">
+                                            <strong>{{ patient.first_name }} {{ patient.last_name }}</strong>
+                                        </div>
+                                    </td>
+                                    <td>{{ patient.date_of_birth }}</td>
+                                    <td>{{ patient.created_at.strftime('%Y-%m-%d %H:%M') if patient.created_at.strftime else patient.created_at }}</td>
+                                    <td>
+                                        <a href="{{ url_for('confirmation', patient_id=patient.id) }}" class="btn-small btn-outline">View Details</a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="empty-state">
+                        <div class="empty-icon">👥</div>
+                        <h3>No Patients Yet</h3>
+                        <p>Start by registering your first patient!</p>
+                        <a href="{{ url_for('index') }}" class="btn btn-primary">Register First Patient</a>
+                    </div>
+                {% endif %}
+            </div>
+        </main>
+    </div>
+</body>
+</html>

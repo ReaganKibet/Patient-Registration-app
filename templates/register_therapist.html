@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Register New Therapist - Pediatric Therapy Clinic</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <header class="page-header">
+            <div class="header-content">
+                <div class="header-info">
+                    <h1>Register New Therapist</h1>
+                    <p>Add a new therapist to the system</p>
+                </div>
+                <div class="header-actions">
+                    <a href="{{ url_for('dashboard') }}" class="btn btn-small btn-outline">← Back to Dashboard</a>
+                </div>
+            </div>
+        </header>
+
+        <!-- Flash messages -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <div class="flash-messages">
+                    {% for category, message in messages %}
+                        <div class="flash flash-{{ category }}">{{ message }}</div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
+
+        <main>
+            <form action="{{ url_for('register_therapist_post') }}" method="POST" class="patient-form">
+                <div class="form-group">
+                    <label for="username">Username *</label>
+                    <input 
+                        type="text" 
+                        id="username" 
+                        name="username" 
+                        value="{{ request.form.username if request.form.username else '' }}"
+                        required
+                        autocomplete="username"
+                        placeholder="Enter unique username"
+                    >
+                    <small class="form-help">Used for login. Must be unique.</small>
+                </div>
+
+                <div class="form-group">
+                    <label for="email">Email *</label>
+                    <input 
+                        type="email" 
+                        id="email" 
+                        name="email" 
+                        value="{{ request.form.email if request.form.email else '' }}"
+                        required
+                        autocomplete="email"
+                        placeholder="therapist@clinic.com"
+                    >
+                </div>
+
+                <div class="form-group">
+                    <label for="full_name">Full Name *</label>
+                    <input 
+                        type="text" 
+                        id="full_name" 
+                        name="full_name" 
+                        value="{{ request.form.full_name if request.form.full_name else '' }}"
+                        required
+                        autocomplete="name"
+                        placeholder="Dr. Jane Smith"
+                    >
+                </div>
+
+                <div class="form-group">
+                    <label for="password">Password *</label>
+                    <input 
+                        type="password" 
+                        id="password" 
+                        name="password" 
+                        required
+                        autocomplete="new-password"
+                        minlength="6"
+                        placeholder="Minimum 6 characters"
+                    >
+                    <small class="form-help">Must be at least 6 characters long.</small>
+                </div>
+
+                <div class="form-group">
+                    <label for="confirm_password">Confirm Password *</label>
+                    <input 
+                        type="password" 
+                        id="confirm_password" 
+                        name="confirm_password" 
+                        required
+                        autocomplete="new-password"
+                        minlength="6"
+                        placeholder="Re-enter password"
+                    >
+                </div>
+
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary">Register Therapist</button>
+                    <a href="{{ url_for('dashboard') }}" class="btn btn-secondary">Cancel</a>
+                </div>
+            </form>
+        </main>
+    </div>
+
+    <script>
+        // Simple password confirmation validation
+        document.getElementById('confirm_password').addEventListener('input', function() {
+            const password = document.getElementById('password').value;
+            const confirmPassword = this.value;
+            
+            if (password !== confirmPassword) {
+                this.setCustomValidity('Passwords do not match');
+            } else {
+                this.setCustomValidity('');
+            }
+        });
+
+        // Real-time password matching indicator
+        document.getElementById('password').addEventListener('input', validatePasswords);
+        document.getElementById('confirm_password').addEventListener('input', validatePasswords);
+
+        function validatePasswords() {
+            const password = document.getElementById('password').value;
+            const confirmPassword = document.getElementById('confirm_password').value;
+            const confirmField = document.getElementById('confirm_password');
+            
+            if (confirmPassword && password !== confirmPassword) {
+                confirmField.style.borderColor = '#e74c3c';
+            } else if (confirmPassword && password === confirmPassword) {
+                confirmField.style.borderColor = '#27ae60';
+            }
+        }
+    </script>
+</body>
+</html>

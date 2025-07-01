@@ -8,9 +8,22 @@
 </head>
 <body>
     <div class="container">
-        <header>
-            <h1>Patient Registration</h1>
-            <p>Pediatric Therapy Clinic</p>
+        <header class="page-header">
+            <div class="header-content">
+                <div class="header-info">
+                    <h1>Patient Registration</h1>
+                    <p>Pediatric Therapy Clinic</p>
+                </div>
+                <div class="header-actions">
+                    {% if current_therapist %}
+                        <span class="therapist-info">Logged in as: <strong>{{ current_therapist.full_name }}</strong></span>
+                        <a href="{{ url_for('dashboard') }}" class="btn btn-small btn-outline">Dashboard</a>
+                        <a href="{{ url_for('logout') }}" class="btn btn-small btn-secondary">Logout</a>
+                    {% else %}
+                        <a href="{{ url_for('login') }}" class="btn btn-small btn-outline">Therapist Login</a>
+                    {% endif %}
+                </div>
+            </div>
         </header>
 
         <!-- Flash messages for validation errors -->
@@ -34,6 +47,7 @@
                         name="first_name" 
                         value="{{ request.form.first_name if request.form.first_name else '' }}"
                         required
+                        placeholder="Enter patient's first name"
                     >
                 </div>
 
@@ -45,6 +59,7 @@
                         name="last_name" 
                         value="{{ request.form.last_name if request.form.last_name else '' }}"
                         required
+                        placeholder="Enter patient's last name"
                     >
                 </div>
 
@@ -57,23 +72,43 @@
                         value="{{ request.form.date_of_birth if request.form.date_of_birth else '' }}"
                         required
                     >
+                    <small class="form-help">Patient's date of birth</small>
                 </div>
 
                 <div class="form-group">
-                    <label for="therapist_name">Therapist Name *</label>
+                    <label for="therapist_name">Assigned Therapist *</label>
                     <input 
                         type="text" 
                         id="therapist_name" 
                         name="therapist_name" 
-                        value="{{ request.form.therapist_name if request.form.therapist_name else '' }}"
+                        value="{{ current_therapist.full_name if current_therapist else (request.form.therapist_name if request.form.therapist_name else '') }}"
                         required
+                        placeholder="Enter therapist's name"
+                        {% if current_therapist %}readonly{% endif %}
                     >
+                    {% if current_therapist %}
+                        <small class="form-help">Pre-filled with your name as the logged-in therapist</small>
+                    {% else %}
+                        <small class="form-help">Enter the name of the assigned therapist</small>
+                    {% endif %}
                 </div>
 
                 <div class="form-actions">
                     <button type="submit" class="btn btn-primary">Register Patient</button>
+                    {% if current_therapist %}
+                        <a href="{{ url_for('dashboard') }}" class="btn btn-secondary">Cancel</a>
+                    {% endif %}
                 </div>
             </form>
+
+            {% if not current_therapist %}
+                <div class="additional-info">
+                    <div class="info-card">
+                        <h3>For Therapists</h3>
+                        <p>If you're a therapist, <a href="{{ url_for('login') }}" class="link">log in here</a> to automatically assign patients to yourself and access your dashboard.</p>
+                    </div>
+                </div>
+            {% endif %}
         </main>
     </div>
 </body>
