@@ -7,109 +7,116 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
-    <div class="container">
-        <header class="page-header">
-            <div class="header-content">
-                <div class="header-info">
-                    <h1>Patient Registration</h1>
-                    <p>Pediatric Therapy Clinic</p>
-                </div>
-                <div class="header-actions">
-                    {% if current_therapist %}
-                        <span class="therapist-info">Logged in as: <strong>{{ current_therapist.full_name }}</strong></span>
-                        <a href="{{ url_for('dashboard') }}" class="btn btn-small btn-outline">Dashboard</a>
-                        <a href="{{ url_for('logout') }}" class="btn btn-small btn-secondary">Logout</a>
-                    {% else %}
-                        <a href="{{ url_for('login') }}" class="btn btn-small btn-outline">Therapist Login</a>
-                    {% endif %}
-                </div>
-            </div>
-        </header>
-
-        <!-- Flash messages for validation errors -->
-        {% with messages = get_flashed_messages(with_categories=true) %}
-            {% if messages %}
-                <div class="flash-messages">
-                    {% for category, message in messages %}
-                        <div class="flash flash-{{ category }}">{{ message }}</div>
-                    {% endfor %}
-                </div>
-            {% endif %}
-        {% endwith %}
-
-        <main>
-            <form action="{{ url_for('submit') }}" method="POST" class="patient-form">
-                <div class="form-group">
-                    <label for="first_name">Patient First Name *</label>
-                    <input 
-                        type="text" 
-                        id="first_name" 
-                        name="first_name" 
-                        value="{{ request.form.first_name if request.form.first_name else '' }}"
-                        required
-                        placeholder="Enter patient's first name"
-                    >
-                </div>
-
-                <div class="form-group">
-                    <label for="last_name">Patient Last Name *</label>
-                    <input 
-                        type="text" 
-                        id="last_name" 
-                        name="last_name" 
-                        value="{{ request.form.last_name if request.form.last_name else '' }}"
-                        required
-                        placeholder="Enter patient's last name"
-                    >
-                </div>
-
-                <div class="form-group">
-                    <label for="date_of_birth">Date of Birth *</label>
-                    <input 
-                        type="date" 
-                        id="date_of_birth" 
-                        name="date_of_birth" 
-                        value="{{ request.form.date_of_birth if request.form.date_of_birth else '' }}"
-                        required
-                    >
-                    <small class="form-help">Patient's date of birth</small>
-                </div>
-
-                <div class="form-group">
-                    <label for="therapist_name">Assigned Therapist *</label>
-                    <input 
-                        type="text" 
-                        id="therapist_name" 
-                        name="therapist_name" 
-                        value="{{ current_therapist.full_name if current_therapist else (request.form.therapist_name if request.form.therapist_name else '') }}"
-                        required
-                        placeholder="Enter therapist's name"
-                        {% if current_therapist %}readonly{% endif %}
-                    >
-                    {% if current_therapist %}
-                        <small class="form-help">Pre-filled with your name as the logged-in therapist</small>
-                    {% else %}
-                        <small class="form-help">Enter the name of the assigned therapist</small>
-                    {% endif %}
-                </div>
-
-                <div class="form-actions">
-                    <button type="submit" class="btn btn-primary">Register Patient</button>
-                    {% if current_therapist %}
-                        <a href="{{ url_for('dashboard') }}" class="btn btn-secondary">Cancel</a>
-                    {% endif %}
-                </div>
-            </form>
-
-            {% if not current_therapist %}
-                <div class="additional-info">
-                    <div class="info-card">
-                        <h3>For Therapists</h3>
-                        <p>If you're a therapist, <a href="{{ url_for('login') }}" class="link">log in here</a> to automatically assign patients to yourself and access your dashboard.</p>
+    <!-- Sidebar -->
+    <div class="sidebar">
+        <div class="sidebar-header">
+            <i class="fas fa-clinic-medical"></i>
+            <span> Charleston Clinic</span>
+        </div>
+        <nav class="sidebar-nav">
+            <a href="{{ url_for('index') }}"><i class="fas fa-user-edit"></i> Register Patient</a>
+            <a href="{{ url_for('login') }}"><i class="fas fa-user-shield"></i> Therapist/Admin Login</a>
+        </nav>
+    </div>
+    <!-- Top Left Login Icon -->
+    
+    <!-- Main Content -->
+    <div class="container main-content">
+        <div class="patient-registration-container">
+            <header class="page-header">
+                <div class="header-content">
+                    <div class="header-info">
+                        <h1>Patient Registration</h1>
+                        <p>Pediatric Therapy Clinic</p>
+                    </div>
+                    <div class="header-actions">
+                        {% if current_therapist %}
+                            <span class="therapist-info">Logged in as: <strong>{{ current_therapist.full_name }}</strong></span>
+                            <a href="{{ url_for('dashboard') }}" class="btn btn-small btn-outline">Dashboard</a>
+                            <a href="{{ url_for('logout') }}" class="btn btn-small btn-secondary">Logout</a>
+                        {% else %}
+                            <a href="{{ url_for('login') }}" class="btn btn-small btn-outline">Therapist Login</a>
+                        {% endif %}
                     </div>
                 </div>
-            {% endif %}
-        </main>
+            </header>
+
+            <!-- Flash messages for validation errors -->
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    <div class="flash-messages">
+                        {% for category, message in messages %}
+                            <div class="flash flash-{{ category }}">{{ message }}</div>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            {% endwith %}
+
+            <main>
+                <form action="{{ url_for('submit') }}" method="POST" class="patient-form">
+                    <div class="form-group">
+                        <label for="first_name">Patient First Name *</label>
+                        <input 
+                            type="text" 
+                            id="first_name" 
+                            name="first_name" 
+                            value="{{ request.form.first_name if request.form.first_name else '' }}"
+                            required
+                            placeholder="Enter patient's first name"
+                        >
+                    </div>
+
+                    <div class="form-group">
+                        <label for="last_name">Patient Last Name *</label>
+                        <input 
+                            type="text" 
+                            id="last_name" 
+                            name="last_name" 
+                            value="{{ request.form.last_name if request.form.last_name else '' }}"
+                            required
+                            placeholder="Enter patient's last name"
+                        >
+                    </div>
+
+                    <div class="form-group">
+                        <label for="date_of_birth">Date of Birth *</label>
+                        <input 
+                            type="date" 
+                            id="date_of_birth" 
+                            name="date_of_birth" 
+                            value="{{ request.form.date_of_birth if request.form.date_of_birth else '' }}"
+                            required
+                        >
+                        <small class="form-help">Patient's date of birth</small>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="therapist_name">Assigned Therapist *</label>
+                        <input 
+                            type="text" 
+                            id="therapist_name" 
+                            name="therapist_name" 
+                            value="{{ current_therapist.full_name if current_therapist else (request.form.therapist_name if request.form.therapist_name else '') }}"
+                            required
+                            placeholder="Enter therapist's name"
+                            {% if current_therapist %}readonly{% endif %}
+                        >
+                        {% if current_therapist %}
+                            <small class="form-help">Pre-filled with your name as the logged-in therapist</small>
+                        {% else %}
+                            <small class="form-help">Enter the name of the assigned therapist</small>
+                        {% endif %}
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn-primary">Register Patient</button>
+                        {% if current_therapist %}
+                            <a href="{{ url_for('dashboard') }}" class="btn btn-secondary">Cancel</a>
+                        {% endif %}
+                    </div>
+                </form>
+            </main>
+        </div>
     </div>
 </body>
 </html>

@@ -5,9 +5,23 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Therapist Dashboard - Pediatric Therapy Clinic</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
-    <div class="container dashboard-container">
+    <!-- Sidebar -->
+    <div class="sidebar">
+        <div class="sidebar-header">
+            <i class="fas fa-clinic-medical"></i>
+            <span>Admin Panel</span>
+        </div>
+        <nav class="sidebar-nav">
+            <a href="{{ url_for('dashboard') }}"><i class="fas fa-tachometer-alt"></i> Dashboard</a>
+            <a href="{{ url_for('register_therapist') }}"><i class="fas fa-user-plus"></i> Register Therapist</a>
+            <a href="{{ url_for('index') }}"><i class="fas fa-user-edit"></i> Register Patient</a>
+        </nav>
+    </div>
+    <!-- Main Content -->
+    <div class="container dashboard-container main-content">
         <header class="dashboard-header">
             <div class="header-content">
                 <div class="header-info">
@@ -32,67 +46,180 @@
         {% endwith %}
 
         <main>
+            <!-- Top Stats Bar -->
+            {% if therapists %}
+            <div class="stats-bar">
+                <div class="stat-card">
+                    <i class="fas fa-users"></i>
+                    <div>
+                        <div class="stat-number">{{ patients|length }}</div>
+                        <div class="stat-label">Patients</div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <i class="fas fa-user-md"></i>
+                    <div>
+                        <div class="stat-number">{{ therapists|length }}</div>
+                        <div class="stat-label">Therapists</div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <i class="fas fa-chart-bar"></i>
+                    <div>
+                        <div class="stat-number">
+                            {% if therapists|length > 0 %}
+                                {{ (patients|length // therapists|length) }}
+                            {% else %}
+                                0
+                            {% endif %}
+                        </div>
+                        <div class="stat-label">Patients / Therapist</div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
             <!-- Quick Stats -->
             <div class="stats-grid">
-                <div class="stat-card">
-                    <div class="stat-number">{{ total_patients }}</div>
-                    <div class="stat-label">Total Patients</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-number">{{ patients|length }}</div>
-                    <div class="stat-label">Recent Registrations</div>
-                </div>
+                <!-- Add your quick stats here if needed -->
             </div>
 
-            <!-- Action Buttons -->
-            <div class="action-buttons">
-                <a href="{{ url_for('index') }}" class="btn btn-primary">Register New Patient</a>
-                <a href="{{ url_for('register_therapist') }}" class="btn btn-outline">Add New Therapist</a>
-            </div>
+            {% if therapists %}
+            <section class="admin-section">
+                <h2>Therapists</h2>
+                <div class="table-responsive">
+                    <table class="styled-table">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Username</th>
+                                <th>Full Name</th>
+                                <th>Email</th>
+                                <th>Active</th>
+                                <th>Registered</th>
+                                <th>Delete</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        {% for t in therapists %}
+                            <tr>
+                                <td>{{ t[0] }}</td>
+                                <td>{{ t[1] }}</td>
+                                <td>{{ t[2] }}</td>
+                                <td>{{ t[3] }}</td>
+                                <td>{{ 'Yes' if t[4] else 'No' }}</td>
+                                <td>{{ format_datetime(t[5]) }}</td>
+                                <td>
+                                    <form action="{{ url_for('delete_therapist', therapist_id=t[0]) }}" method="post" onsubmit="return confirm('Delete this therapist?');">
+                                        <button type="submit" class="danger-btn">Delete</button>
+                                    </form>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                <!-- Analytics Bar Chart -->
+                <div class="analytics-section">
+                    <h3>Patient Registrations</h3>
+                    <canvas id="patientsBarChart" width="400" height="200"></canvas>
+                </div>
+            </section>
+            {% endif %}
 
             <!-- Patients Table -->
-            <div class="patients-section">
-                <h2>Your Patients</h2>
-                
-                {% if patients %}
-                    <div class="patients-table-container">
-                        <table class="patients-table">
-                            <thead>
-                                <tr>
-                                    <th>Patient Name</th>
-                                    <th>Date of Birth</th>
-                                    <th>Registration Date</th>
-                                    <th>Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for patient in patients %}
-                                <tr>
-                                    <td>
-                                        <div class="patient-name">
-                                            <strong>{{ patient.first_name }} {{ patient.last_name }}</strong>
-                                        </div>
-                                    </td>
-                                    <td>{{ patient.date_of_birth }}</td>
-                                    <td>{{ patient.created_at.strftime('%Y-%m-%d %H:%M') if patient.created_at.strftime else patient.created_at }}</td>
-                                    <td>
-                                        <a href="{{ url_for('confirmation', patient_id=patient.id) }}" class="btn-small btn-outline">View Details</a>
-                                    </td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
-                {% else %}
-                    <div class="empty-state">
-                        <div class="empty-icon">👥</div>
-                        <h3>No Patients Yet</h3>
-                        <p>Start by registering your first patient!</p>
-                        <a href="{{ url_for('index') }}" class="btn btn-primary">Register First Patient</a>
-                    </div>
-                {% endif %}
-            </div>
+            <section>
+                <h2>Patients</h2>
+                <div class="table-responsive">
+                    <table class="styled-table">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>First Name</th>
+                                <th>Last Name</th>
+                                <th>Date of Birth</th>
+                                <th>Therapist ID</th>
+                                <th>Registered</th>
+                                {% if therapists %}<th>Delete</th>{% endif %}
+                            </tr>
+                        </thead>
+                        <tbody>
+                        {% for p in patients %}
+                            <tr>
+                                <td>{{ p[0] }}</td>
+                                <td>{{ p[1] }}</td>
+                                <td>{{ p[2] }}</td>
+                                <td>{{ p[3] }}</td>
+                                <td>{{ p[4] }}</td>
+                                <td>{{ format_datetime(p[5]) }}</td>
+                                {% if therapists %}
+                                <td>
+                                    <form action="{{ url_for('delete_patient', patient_id=p[0]) }}" method="post" onsubmit="return confirm('Delete this patient?');">
+                                        <button type="submit" class="danger-btn">Delete</button>
+                                    </form>
+                                </td>
+                                {% endif %}
+                            </tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </section>
         </main>
     </div>
+
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        // These variables should be passed from Flask as JSON
+        const weeklyLabels = {{ weekly_labels|tojson }};
+        const weeklyCounts = {{ weekly_counts|tojson }};
+        const monthlyLabels = {{ monthly_labels|tojson }};
+        const monthlyCounts = {{ monthly_counts|tojson }};
+
+        const ctx = document.getElementById('patientsBarChart').getContext('2d');
+        const patientsBarChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: weeklyLabels.concat(monthlyLabels),
+                datasets: [
+                    {
+                        label: 'Patients per Week',
+                        data: weeklyCounts,
+                        backgroundColor: 'rgba(255,255,255,0.7)',
+                        borderColor: 'rgba(0,0,0,1)',
+                        borderWidth: 1
+                    },
+                    {
+                        label: 'Patients per Month',
+                        data: Array(weeklyLabels.length).fill(null).concat(monthlyCounts),
+                        backgroundColor: 'rgba(0,0,0,0.7)',
+                        borderColor: 'rgba(255,255,255,1)',
+                        borderWidth: 1
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: { labels: { color: '#fff' } },
+                    title: { display: false }
+                },
+                scales: {
+                    x: { ticks: { color: '#fff' }, grid: { color: '#444' } },
+                    y: {
+                        beginAtZero: true,
+                        min: 1,
+                        max: 100,
+                        ticks: {
+                            color: '#fff',
+                            stepSize: 5
+                        },
+                        grid: { color: '#444' }
+                    }
+                }
+            }
+        });
+    </script>
 </body>
 </html>

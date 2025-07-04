@@ -7,6 +7,7 @@ from urllib.parse import urlparse
 from werkzeug.security import generate_password_hash, check_password_hash
 from functools import wraps
 import secrets
+from collections import Counter
 
 app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY', 'dev-secret-key-change-in-production')
@@ -186,6 +187,10 @@ def format_datetime(dt):
         return dt.strftime('%Y-%m-%d %H:%M')
     return str(dt)
 
+def is_admin(therapist):
+    # Adjust this logic if you use a different admin check
+    return therapist.get('username', '') == 'admin'
+
 # Authentication Routes
 @app.route('/login')
 def login():
@@ -246,46 +251,66 @@ def dashboard():
     conn = get_db_connection()
     cursor = conn.cursor()
     
-    # Get patients for this therapist
-    cursor.execute('''
-        SELECT id, first_name, last_name, date_of_birth, created_at
-        FROM patients 
-        WHERE therapist_id = %s 
-        ORDER BY created_at DESC
-    ''' if DATABASE_URL else '''
-        SELECT id, first_name, last_name, date_of_birth, created_at
-        FROM patients 
-        WHERE therapist_id = ? 
-        ORDER BY created_at DESC
-    ''', (therapist['id'],))
-    
-    patients = cursor.fetchall()
-    
-    # Get total patient count
-    cursor.execute('''
-        SELECT COUNT(*) FROM patients WHERE therapist_id = %s
-    ''' if DATABASE_URL else '''
-        SELECT COUNT(*) FROM patients WHERE therapist_id = ?
-    ''', (therapist['id'],))
-    
-    total_patients = cursor.fetchone()[0]
+    if is_admin(therapist):
+        # Admin: see all therapists and patients
+        cursor.execute('SELECT id, username, full_name, email, is_active, created_at FROM therapists')
+        therapists = cursor.fetchall()
+        cursor.execute('SELECT id, first_name, last_name, date_of_birth, therapist_id, created_at FROM patients')
+        patients = cursor.fetchall()
+    else:
+        # Regular therapist: see only their patients
+        cursor.execute('SELECT id, first_name, last_name, date_of_birth, therapist_id, created_at FROM patients WHERE therapist_id = %s' if DATABASE_URL else 'SELECT id, first_name, last_name, date_of_birth, therapist_id, created_at FROM patients WHERE therapist_id = ?', (therapist['id'],))
+        patients = cursor.fetchall()
+        therapists = []
+
+    # --- Analytics: Weekly and Monthly patient registrations ---
+    patient_dates = [p[5] for p in patients if p[5]]
+    # Parse dates
+    parsed_dates = []
+    for d in patient_dates:
+        if isinstance(d, str):
+            try:
+                parsed_dates.append(datetime.fromisoformat(d.replace('Z', '+00:00')))
+            except Exception:
+                continue
+        else:
+            parsed_dates.append(d)
+    # Weekly
+    week_labels = []
+    week_counts = []
+    if parsed_dates:
+        min_date = min(parsed_dates)
+        max_date = max(parsed_dates)
+        current = min_date - timedelta(days=min_date.weekday())
+        while current <= max_date:
+            label = current.strftime('Week of %Y-%m-%d')
+            week_labels.append(label)
+            count = sum(1 for d in parsed_dates if current <= d < current + timedelta(days=7))
+            week_counts.append(count)
+            current += timedelta(days=7)
+    # Monthly
+    month_labels = []
+    month_counts = []
+    if parsed_dates:
+        months = sorted(set((d.year, d.month) for d in parsed_dates))
+        for y, m in months:
+            label = f"{y}-{m:02d}"
+            month_labels.append(label)
+            count = sum(1 for d in parsed_dates if d.year == y and d.month == m)
+            month_counts.append(count)
+
     conn.close()
-    
-    # Format patients data
-    patients_data = []
-    for patient in patients:
-        patients_data.append({
-            'id': patient[0],
-            'first_name': patient[1],
-            'last_name': patient[2],
-            'date_of_birth': patient[3],
-            'created_at': patient[4]
-        })
-    
-    return render_template('dashboard.html', 
-                         therapist=therapist, 
-                         patients=patients_data,
-                         total_patients=total_patients)
+    return render_template(
+        'dashboard.html',
+        therapist=therapist,
+        therapists=therapists,
+        patients=patients,
+        weekly_labels=week_labels,
+        weekly_counts=week_counts,
+        monthly_labels=month_labels,
+        monthly_counts=month_counts,
+        format_datetime=format_datetime
+    )
 
 # Patient Registration Routes
 @app.route('/')
@@ -465,6 +490,36 @@ def register_therapist_post():
         flash('An error occurred while registering the therapist', 'error')
         conn.close()
         return redirect(url_for('register_therapist'))
+
+@app.route('/delete_therapist/<int:therapist_id>', methods=['POST'])
+@login_required
+def delete_therapist(therapist_id):
+    therapist = get_current_therapist()
+    if not is_admin(therapist):
+        flash('Unauthorized', 'error')
+        return redirect(url_for('dashboard'))
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute('DELETE FROM therapists WHERE id = %s' if DATABASE_URL else 'DELETE FROM therapists WHERE id = ?', (therapist_id,))
+    conn.commit()
+    conn.close()
+    flash('Therapist deleted.', 'success')
+    return redirect(url_for('dashboard'))
+
+@app.route('/delete_patient/<int:patient_id>', methods=['POST'])
+@login_required
+def delete_patient(patient_id):
+    therapist = get_current_therapist()
+    if not is_admin(therapist):
+        flash('Unauthorized', 'error')
+        return redirect(url_for('dashboard'))
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute('DELETE FROM patients WHERE id = %s' if DATABASE_URL else 'DELETE FROM patients WHERE id = ?', (patient_id,))
+    conn.commit()
+    conn.close()
+    flash('Patient deleted.', 'success')
+    return redirect(url_for('dashboard'))
 
 # Simple confirmation route without ID for testing
 @app.route('/confirmation')
