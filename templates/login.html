@@ -5,26 +5,27 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Therapist Login - Pediatric Therapy Clinic</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
-    <div class="container">
-        <header>
-            <h1>Therapist Login</h1>
-            <p>Pediatric Therapy Clinic</p>
-        </header>
-
-        <!-- Flash messages for login errors -->
-        {% with messages = get_flashed_messages(with_categories=true) %}
-            {% if messages %}
-                <div class="flash-messages">
-                    {% for category, message in messages %}
-                        <div class="flash flash-{{ category }}">{{ message }}</div>
-                    {% endfor %}
-                </div>
-            {% endif %}
-        {% endwith %}
-
-        <main>
+    <!-- Main Content: Centered Login Box -->
+    <div class="main-content login-center">
+        <div class="registration-box login-box">
+            <div class="registration-box-header">
+                <i class="fas fa-user-shield"></i>
+                <h1>Therapist/Admin Login</h1>
+                <p>Pediatric Therapy Clinic</p>
+            </div>
+            <!-- Flash messages for login errors -->
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    <div class="flash-messages">
+                        {% for category, message in messages %}
+                            <div class="flash flash-{{ category }}">{{ message }}</div>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            {% endwith %}
             <form action="{{ url_for('login_post') }}" method="POST" class="patient-form">
                 <div class="form-group">
                     <label for="username">Username *</label>
@@ -35,9 +36,9 @@
                         value="{{ request.form.username if request.form.username else '' }}"
                         required
                         autocomplete="username"
+                        placeholder="Enter your username"
                     >
                 </div>
-
                 <div class="form-group">
                     <label for="password">Password *</label>
                     <input 
@@ -46,18 +47,16 @@
                         name="password" 
                         required
                         autocomplete="current-password"
+                        placeholder="Enter your password"
                     >
                 </div>
-
                 <div class="form-actions">
                     <button type="submit" class="btn btn-primary">Login</button>
                 </div>
             </form>
-
             <div class="additional-links">
                 <p><a href="{{ url_for('index') }}" class="link">← Back to Patient Registration</a></p>
             </div>
-
             <!-- Demo credentials info -->
             <div class="demo-info">
                 <h3>Demo Credentials</h3>
@@ -65,7 +64,7 @@
                 <p><strong>Password:</strong> admin123</p>
                 <p><small>⚠️ Change default credentials in production!</small></p>
             </div>
-        </main>
+        </div>
     </div>
 </body>
 </html>

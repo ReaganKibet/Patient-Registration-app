@@ -7,33 +7,61 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
-<body>
-    <!-- Sidebar -->
-    <div class="sidebar">
-        <div class="sidebar-header">
-            <i class="fas fa-clinic-medical"></i>
-            <span>Admin Panel</span>
+<body class="dashboard-page">
+    <!-- Top Navbar -->
+    <nav class="top-navbar">
+        <div class="navbar-left">
+            <span class="navbar-title"><i class="fas fa-clinic-medical"></i> Admin Panel</span>
         </div>
-        <nav class="sidebar-nav">
-            <a href="{{ url_for('dashboard') }}"><i class="fas fa-tachometer-alt"></i> Dashboard</a>
-            <a href="{{ url_for('register_therapist') }}"><i class="fas fa-user-plus"></i> Register Therapist</a>
-            <a href="{{ url_for('index') }}"><i class="fas fa-user-edit"></i> Register Patient</a>
-        </nav>
-    </div>
+        <div class="navbar-center">
+            <a href="{{ url_for('dashboard') }}" class="nav-link {% if request.path == url_for('dashboard') %}active{% endif %}"><i class="fas fa-tachometer-alt"></i> Dashboard</a>
+            <a href="{{ url_for('register_therapist') }}" class="nav-link"><i class="fas fa-user-plus"></i> Register Therapist</a>
+            <a href="{{ url_for('index') }}" class="nav-link"><i class="fas fa-user-edit"></i> Register Patient</a>
+            <a href="#" class="nav-link"><i class="fas fa-address-book"></i> Therapist Directory</a>
+            <a href="#" class="nav-link"><i class="fas fa-calendar-alt"></i> Appointments</a>
+            <a href="#" class="nav-link"><i class="fas fa-chart-line"></i> Reports</a>
+            <a href="#" class="nav-link"><i class="fas fa-cog"></i> Settings</a>
+            <a href="#" class="nav-link"><i class="fas fa-question-circle"></i> Help Center</a>
+        </div>
+        <div class="navbar-right">
+            <div class="navbar-user">
+                <i class="fas fa-user-shield"></i>
+                <span class="navbar-user-name">
+                    {% if therapist %}
+                        {{ 'Admin' if therapist.username == 'admin' else therapist.full_name }}
+                    {% else %}
+                        Guest
+                    {% endif %}
+                </span>
+            </div>
+        </div>
+    </nav>
+
     <!-- Main Content -->
-    <div class="container dashboard-container main-content">
+    <div class="dashboard-container main-content">
         <header class="dashboard-header">
             <div class="header-content">
-                <div class="header-info">
-                    <h1>Therapist Dashboard</h1>
-                    <p>Welcome, {{ therapist.full_name }}!</p>
+                <div class="header-info welcome-card">
+                    <div class="welcome-avatar">
+                        <i class="fas fa-user-shield"></i>
+                    </div>
+                    <div class="welcome-text">
+                        <h2>
+                            Welcome,
+                            <span class="dashboard-user-highlight">
+                                {{ therapist.full_name or 'Admin' }}!
+                            </span>
+                        </h2>
+                        <span class="role-label">
+                            {{ 'Admin' if therapist and therapist.username == 'admin' else 'Therapist' }}
+                        </span>
+                    </div>
                 </div>
                 <div class="header-actions">
                     <a href="{{ url_for('logout') }}" class="btn btn-secondary">Logout</a>
                 </div>
             </div>
         </header>
-
         <!-- Flash messages -->
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
@@ -44,11 +72,9 @@
                 </div>
             {% endif %}
         {% endwith %}
-
         <main>
-            <!-- Top Stats Bar -->
-            {% if therapists %}
-            <div class="stats-bar">
+            <!-- Stats Horizontal Row -->
+            <div class="dashboard-stats-row">
                 <div class="stat-card">
                     <i class="fas fa-users"></i>
                     <div>
@@ -76,107 +102,137 @@
                         <div class="stat-label">Patients / Therapist</div>
                     </div>
                 </div>
-            </div>
-            {% endif %}
-
-            <!-- Quick Stats -->
-            <div class="stats-grid">
-                <!-- Add your quick stats here if needed -->
-            </div>
-
-            {% if therapists %}
-            <section class="admin-section">
-                <h2>Therapists</h2>
-                <div class="table-responsive">
-                    <table class="styled-table">
-                        <thead>
-                            <tr>
-                                <th>ID</th>
-                                <th>Username</th>
-                                <th>Full Name</th>
-                                <th>Email</th>
-                                <th>Active</th>
-                                <th>Registered</th>
-                                <th>Delete</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                        {% for t in therapists %}
-                            <tr>
-                                <td>{{ t[0] }}</td>
-                                <td>{{ t[1] }}</td>
-                                <td>{{ t[2] }}</td>
-                                <td>{{ t[3] }}</td>
-                                <td>{{ 'Yes' if t[4] else 'No' }}</td>
-                                <td>{{ format_datetime(t[5]) }}</td>
-                                <td>
-                                    <form action="{{ url_for('delete_therapist', therapist_id=t[0]) }}" method="post" onsubmit="return confirm('Delete this therapist?');">
-                                        <button type="submit" class="danger-btn">Delete</button>
-                                    </form>
-                                </td>
-                            </tr>
-                        {% endfor %}
-                        </tbody>
-                    </table>
+                <div class="stat-card">
+                    <i class="fas fa-calendar-week"></i>
+                    <div>
+                        <div class="stat-number">{{ weekly_counts|last if weekly_counts else 0 }}</div>
+                        <div class="stat-label">This Week</div>
+                    </div>
                 </div>
-                <!-- Analytics Bar Chart -->
-                <div class="analytics-section">
-                    <h3>Patient Registrations</h3>
-                    <canvas id="patientsBarChart" width="400" height="200"></canvas>
+                <div class="stat-card">
+                    <i class="fas fa-calendar-alt"></i>
+                    <div>
+                        <div class="stat-number">{{ monthly_counts|last if monthly_counts else 0 }}</div>
+                        <div class="stat-label">This Month</div>
+                    </div>
+                </div>
+            </div>
+            <!-- Quick Info Cards Row -->
+            <div class="dashboard-info-row">
+                <div class="info-card">
+                    <h3><i class="fas fa-info-circle"></i> System Status</h3>
+                    <p>All systems operational</p>
+                </div>
+                <div class="info-card">
+                    <h3><i class="fas fa-award"></i> Best Therapist</h3>
+                    <p>Coming soon.</p>
+                </div>
+            </div>
+            <!-- Therapists List Box -->
+            {% if therapists %}
+            <section class="dashboard-list-section">
+                <div class="list-card">
+                    <div class="list-card-header">
+                        <i class="fas fa-user-md"></i>
+                        <h2>Therapists</h2>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="styled-table wide-table">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Username</th>
+                                    <th>Full Name</th>
+                                    <th>Email</th>
+                                    <th>Active</th>
+                                    <th>Registered</th>
+                                    <th>Delete</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                            {% for t in therapists %}
+                                <tr>
+                                    <td>{{ t[0] }}</td>
+                                    <td>{{ t[1] }}</td>
+                                    <td>{{ t[2] }}</td>
+                                    <td>{{ t[3] }}</td>
+                                    <td>
+                                        {% if t[4] %}
+                                            <span class="badge badge-success">Yes</span>
+                                        {% else %}
+                                            <span class="badge badge-danger">No</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ format_datetime(t[5]) }}</td>
+                                    <td>
+                                        <form action="{{ url_for('delete_therapist', therapist_id=t[0]) }}" method="post" onsubmit="return confirm('Delete this therapist?');">
+                                            <button type="submit" class="danger-btn"><i class="fas fa-trash"></i></button>
+                                        </form>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="analytics-section">
+                        <h3><i class="fas fa-chart-bar"></i> Patient Registrations</h3>
+                        <canvas id="patientsBarChart" width="400" height="200"></canvas>
+                    </div>
                 </div>
             </section>
             {% endif %}
-
-            <!-- Patients Table -->
-            <section>
-                <h2>Patients</h2>
-                <div class="table-responsive">
-                    <table class="styled-table">
-                        <thead>
-                            <tr>
-                                <th>ID</th>
-                                <th>First Name</th>
-                                <th>Last Name</th>
-                                <th>Date of Birth</th>
-                                <th>Therapist ID</th>
-                                <th>Registered</th>
-                                {% if therapists %}<th>Delete</th>{% endif %}
-                            </tr>
-                        </thead>
-                        <tbody>
-                        {% for p in patients %}
-                            <tr>
-                                <td>{{ p[0] }}</td>
-                                <td>{{ p[1] }}</td>
-                                <td>{{ p[2] }}</td>
-                                <td>{{ p[3] }}</td>
-                                <td>{{ p[4] }}</td>
-                                <td>{{ format_datetime(p[5]) }}</td>
-                                {% if therapists %}
-                                <td>
-                                    <form action="{{ url_for('delete_patient', patient_id=p[0]) }}" method="post" onsubmit="return confirm('Delete this patient?');">
-                                        <button type="submit" class="danger-btn">Delete</button>
-                                    </form>
-                                </td>
-                                {% endif %}
-                            </tr>
-                        {% endfor %}
-                        </tbody>
-                    </table>
+            <!-- Patients List Box -->
+            <section class="dashboard-list-section">
+                <div class="list-card">
+                    <div class="list-card-header">
+                        <i class="fas fa-users"></i>
+                        <h2>Patients</h2>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="styled-table wide-table">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>First Name</th>
+                                    <th>Last Name</th>
+                                    <th>Date of Birth</th>
+                                    <th>Therapist ID</th>
+                                    <th>Registered</th>
+                                    {% if therapists %}<th>Delete</th>{% endif %}
+                                </tr>
+                            </thead>
+                            <tbody>
+                            {% for p in patients %}
+                                <tr>
+                                    <td>{{ p[0] }}</td>
+                                    <td>{{ p[1] }}</td>
+                                    <td>{{ p[2] }}</td>
+                                    <td>{{ p[3] }}</td>
+                                    <td>{{ p[4] }}</td>
+                                    <td>{{ format_datetime(p[5]) }}</td>
+                                    {% if therapists %}
+                                    <td>
+                                        <form action="{{ url_for('delete_patient', patient_id=p[0]) }}" method="post" onsubmit="return confirm('Delete this patient?');">
+                                            <button type="submit" class="danger-btn"><i class="fas fa-trash"></i></button>
+                                        </form>
+                                    </td>
+                                    {% endif %}
+                                </tr>
+                            {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </section>
         </main>
     </div>
-
     <!-- Chart.js CDN -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
-        // These variables should be passed from Flask as JSON
         const weeklyLabels = {{ weekly_labels|tojson }};
         const weeklyCounts = {{ weekly_counts|tojson }};
         const monthlyLabels = {{ monthly_labels|tojson }};
         const monthlyCounts = {{ monthly_counts|tojson }};
-
         const ctx = document.getElementById('patientsBarChart').getContext('2d');
         const patientsBarChart = new Chart(ctx, {
             type: 'bar',
@@ -186,15 +242,15 @@
                     {
                         label: 'Patients per Week',
                         data: weeklyCounts,
-                        backgroundColor: 'rgba(255,255,255,0.7)',
-                        borderColor: 'rgba(0,0,0,1)',
+                        backgroundColor: 'rgba(24,126,231,0.7)',
+                        borderColor: 'rgba(24,126,231,1)',
                         borderWidth: 1
                     },
                     {
                         label: 'Patients per Month',
                         data: Array(weeklyLabels.length).fill(null).concat(monthlyCounts),
-                        backgroundColor: 'rgba(0,0,0,0.7)',
-                        borderColor: 'rgba(255,255,255,1)',
+                        backgroundColor: 'rgba(56,161,105,0.7)',
+                        borderColor: 'rgba(56,161,105,1)',
                         borderWidth: 1
                     }
                 ]
@@ -202,20 +258,19 @@
             options: {
                 responsive: true,
                 plugins: {
-                    legend: { labels: { color: '#fff' } },
+                    legend: { labels: { color: '#333' } },
                     title: { display: false }
                 },
                 scales: {
-                    x: { ticks: { color: '#fff' }, grid: { color: '#444' } },
+                    x: { ticks: { color: '#333' }, grid: { color: '#e3f0fc' } },
                     y: {
                         beginAtZero: true,
                         min: 1,
-                        max: 100,
                         ticks: {
-                            color: '#fff',
+                            color: '#333',
                             stepSize: 5
                         },
-                        grid: { color: '#444' }
+                        grid: { color: '#e3f0fc' }
                     }
                 }
             }
