@@ -17,7 +17,7 @@
         <nav class="sidebar-nav">
             <a href="{{ url_for('index') }}"><i class="fas fa-user-edit"></i> Register Patient</a>
             <a href="{{ url_for('login') }}"><i class="fas fa-user-shield"></i> Therapist/Admin Login</a>
-            <a href="#"><i class="fas fa-address-book"></i> Therapist Directory</a>
+            <a href="{{ url_for('therapist_directory') }}" class="nav-link"><i class="fas fa-address-book"></i> Therapist Directory</a>
             <a href="#"><i class="fas fa-calendar-alt"></i> Appointments</a>
             <a href="#"><i class="fas fa-question-circle"></i> Help Center</a>
         </nav>
