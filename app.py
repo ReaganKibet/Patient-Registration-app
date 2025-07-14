@@ -51,8 +51,36 @@ def init_db():
                 email VARCHAR(100) UNIQUE NOT NULL,
                 password_hash VARCHAR(255) NOT NULL,
                 full_name VARCHAR(100) NOT NULL,
+                role VARCHAR(20) NOT NULL DEFAULT 'therapist',
                 is_active BOOLEAN DEFAULT TRUE,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )git add
+        ''')
+        # Appointments table
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS appointments (
+                id SERIAL PRIMARY KEY,
+                patient_id INTEGER NOT NULL,
+                therapist_id INTEGER,
+                appointment_time TIMESTAMP NOT NULL,
+                status VARCHAR(20) DEFAULT 'scheduled',
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (patient_id) REFERENCES patients (id),
+                FOREIGN KEY (therapist_id) REFERENCES therapists (id)
+            )
+        ''')
+        # Audit logs table
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS audit_logs (
+                id SERIAL PRIMARY KEY,
+                user_id INTEGER,
+                action VARCHAR(50) NOT NULL,
+                target_type VARCHAR(50),
+                target_id INTEGER,
+                timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                details TEXT,
+                FOREIGN KEY (user_id) REFERENCES therapists (id)
             )
         ''')
         
@@ -78,8 +106,36 @@ def init_db():
                 email TEXT UNIQUE NOT NULL,
                 password_hash TEXT NOT NULL,
                 full_name TEXT NOT NULL,
+                role TEXT NOT NULL DEFAULT 'therapist',
                 is_active BOOLEAN DEFAULT 1,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        ''')
+        # Appointments table
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS appointments (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                patient_id INTEGER NOT NULL,
+                therapist_id INTEGER,
+                appointment_time TIMESTAMP NOT NULL,
+                status TEXT DEFAULT 'scheduled',
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (patient_id) REFERENCES patients (id),
+                FOREIGN KEY (therapist_id) REFERENCES therapists (id)
+            )
+        ''')
+        # Audit logs table
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS audit_logs (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER,
+                action TEXT NOT NULL,
+                target_type TEXT,
+                target_id INTEGER,
+                timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                details TEXT,
+                FOREIGN KEY (user_id) REFERENCES therapists (id)
             )
         ''')
     
@@ -97,14 +153,14 @@ def init_db():
         admin_password = generate_password_hash('admin123')  # Change this in production!
         if DATABASE_URL:
             cursor.execute('''
-                INSERT INTO therapists (username, email, password_hash, full_name)
-                VALUES (%s, %s, %s, %s)
-            ''', ('admin', 'admin@clinic.com', admin_password, 'Administrator'))
+                INSERT INTO therapists (username, email, password_hash, full_name, role)
+                VALUES (%s, %s, %s, %s, %s)
+            ''', ('admin', 'admin@clinic.com', admin_password, 'Administrator', 'admin'))
         else:
             cursor.execute('''
-                INSERT INTO therapists (username, email, password_hash, full_name)
-                VALUES (?, ?, ?, ?)
-            ''', ('admin', 'admin@clinic.com', admin_password, 'Administrator'))
+                INSERT INTO therapists (username, email, password_hash, full_name, role)
+                VALUES (?, ?, ?, ?, ?)
+            ''', ('admin', 'admin@clinic.com', admin_password, 'Administrator', 'admin'))
         
         conn.commit()
     
@@ -129,9 +185,9 @@ def get_current_therapist():
     cursor = conn.cursor()
     
     cursor.execute('''
-        SELECT id, username, email, full_name FROM therapists WHERE id = %s
+        SELECT id, username, email, full_name, role FROM therapists WHERE id = %s
     ''' if DATABASE_URL else '''
-        SELECT id, username, email, full_name FROM therapists WHERE id = ?
+        SELECT id, username, email, full_name, role FROM therapists WHERE id = ?
     ''', (session['therapist_id'],))
     
     therapist = cursor.fetchone()
@@ -142,7 +198,8 @@ def get_current_therapist():
             'id': therapist[0],
             'username': therapist[1],
             'email': therapist[2],
-            'full_name': therapist[3]
+            'full_name': therapist[3],
+            'role': therapist[4]
         }
     return None
 
@@ -188,8 +245,32 @@ def format_datetime(dt):
     return str(dt)
 
 def is_admin(therapist):
-    # Adjust this logic if you use a different admin check
-    return therapist.get('username', '') == 'admin'
+    return therapist.get('role', '') == 'admin'
+
+def role_required(*roles):
+    def decorator(f):
+        @wraps(f)
+        def wrapped(*args, **kwargs):
+            therapist = get_current_therapist()
+            if not therapist or therapist.get('role') not in roles:
+                flash('You do not have permission to access this page.', 'error')
+                return redirect(url_for('dashboard'))
+            return f(*args, **kwargs)
+        return wrapped
+    return decorator
+
+def log_audit_action(user_id, action, target_type=None, target_id=None, details=None):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute('''
+        INSERT INTO audit_logs (user_id, action, target_type, target_id, details)
+        VALUES (%s, %s, %s, %s, %s)
+    ''' if DATABASE_URL else '''
+        INSERT INTO audit_logs (user_id, action, target_type, target_id, details)
+        VALUES (?, ?, ?, ?, ?)
+    ''', (user_id, action, target_type, target_id, details))
+    conn.commit()
+    conn.close()
 
 # Authentication Routes
 @app.route('/login')
@@ -245,71 +326,83 @@ def logout():
 @app.route('/dashboard')
 @login_required
 def dashboard():
-    """Therapist dashboard showing their patients"""
+    """Role-based dashboard: all see daily registrations & appointments, only admin sees summaries & user lists"""
     therapist = get_current_therapist()
-    
     conn = get_db_connection()
     cursor = conn.cursor()
-    
+
+    # Daily registrations (all roles)
+    today = datetime.now().date()
+    cursor.execute('SELECT COUNT(*) FROM patients WHERE DATE(created_at) = %s' if DATABASE_URL else 'SELECT COUNT(*) FROM patients WHERE DATE(created_at) = ?', (today,))
+    daily_registrations = cursor.fetchone()[0]
+
+    # Upcoming appointments (all roles, next 7 days)
+    cursor.execute('SELECT a.id, a.appointment_time, p.first_name, p.last_name, t.full_name FROM appointments a JOIN patients p ON a.patient_id = p.id LEFT JOIN therapists t ON a.therapist_id = t.id WHERE a.appointment_time >= %s AND a.appointment_time < %s ORDER BY a.appointment_time ASC' if DATABASE_URL else 'SELECT a.id, a.appointment_time, p.first_name, p.last_name, t.full_name FROM appointments a JOIN patients p ON a.patient_id = p.id LEFT JOIN therapists t ON a.therapist_id = t.id WHERE a.appointment_time >= ? AND a.appointment_time < ? ORDER BY a.appointment_time ASC', (datetime.now(), datetime.now() + timedelta(days=7)))
+    upcoming_appointments = cursor.fetchall()
+
+    # Only admin sees summaries and user lists
+    weekly_labels, weekly_counts, month_labels, month_counts, therapists, user_lists = [], [], [], [], [], []
     if is_admin(therapist):
-        # Admin: see all therapists and patients
-        cursor.execute('SELECT id, username, full_name, email, is_active, created_at FROM therapists')
+        cursor.execute('SELECT id, username, full_name, email, is_active, role, created_at FROM therapists')
         therapists = cursor.fetchall()
         cursor.execute('SELECT id, first_name, last_name, date_of_birth, therapist_id, created_at FROM patients')
         patients = cursor.fetchall()
+        # Summaries
+        patient_dates = [p[5] for p in patients if p[5]]
+        parsed_dates = []
+        for d in patient_dates:
+            if isinstance(d, str):
+                try:
+                    parsed_dates.append(datetime.fromisoformat(d.replace('Z', '+00:00')))
+                except Exception:
+                    continue
+            else:
+                parsed_dates.append(d)
+        # Weekly
+        if parsed_dates:
+            min_date = min(parsed_dates)
+            max_date = max(parsed_dates)
+            current = min_date - timedelta(days=min_date.weekday())
+            while current <= max_date:
+                label = current.strftime('Week of %Y-%m-%d')
+                weekly_labels.append(label)
+                count = sum(1 for d in parsed_dates if current <= d < current + timedelta(days=7))
+                weekly_counts.append(count)
+                current += timedelta(days=7)
+        # Monthly
+        if parsed_dates:
+            months = sorted(set((d.year, d.month) for d in parsed_dates))
+            for y, m in months:
+                label = f"{y}-{m:02d}"
+                month_labels.append(label)
+                count = sum(1 for d in parsed_dates if d.year == y and d.month == m)
+                month_counts.append(count)
+        # User lists by role
+        user_lists = {
+            'doctors': [t for t in therapists if t[5] == 'doctor'],
+            'nurses': [t for t in therapists if t[5] == 'nurse'],
+            'therapists': [t for t in therapists if t[5] == 'therapist']
+        }
     else:
-        # Regular therapist: see only their patients
+        # Non-admins see only their patients
         cursor.execute('SELECT id, first_name, last_name, date_of_birth, therapist_id, created_at FROM patients WHERE therapist_id = %s' if DATABASE_URL else 'SELECT id, first_name, last_name, date_of_birth, therapist_id, created_at FROM patients WHERE therapist_id = ?', (therapist['id'],))
         patients = cursor.fetchall()
-        therapists = []
-
-    # --- Analytics: Weekly and Monthly patient registrations ---
-    patient_dates = [p[5] for p in patients if p[5]]
-    # Parse dates
-    parsed_dates = []
-    for d in patient_dates:
-        if isinstance(d, str):
-            try:
-                parsed_dates.append(datetime.fromisoformat(d.replace('Z', '+00:00')))
-            except Exception:
-                continue
-        else:
-            parsed_dates.append(d)
-    # Weekly
-    week_labels = []
-    week_counts = []
-    if parsed_dates:
-        min_date = min(parsed_dates)
-        max_date = max(parsed_dates)
-        current = min_date - timedelta(days=min_date.weekday())
-        while current <= max_date:
-            label = current.strftime('Week of %Y-%m-%d')
-            week_labels.append(label)
-            count = sum(1 for d in parsed_dates if current <= d < current + timedelta(days=7))
-            week_counts.append(count)
-            current += timedelta(days=7)
-    # Monthly
-    month_labels = []
-    month_counts = []
-    if parsed_dates:
-        months = sorted(set((d.year, d.month) for d in parsed_dates))
-        for y, m in months:
-            label = f"{y}-{m:02d}"
-            month_labels.append(label)
-            count = sum(1 for d in parsed_dates if d.year == y and d.month == m)
-            month_counts.append(count)
 
     conn.close()
     return render_template(
         'dashboard.html',
         therapist=therapist,
-        therapists=therapists,
+        therapists=therapists if is_admin(therapist) else [],
         patients=patients,
-        weekly_labels=week_labels,
-        weekly_counts=week_counts,
+        daily_registrations=daily_registrations,
+        upcoming_appointments=upcoming_appointments,
+        weekly_labels=weekly_labels,
+        weekly_counts=weekly_counts,
         monthly_labels=month_labels,
         monthly_counts=month_counts,
+        user_lists=user_lists,
         format_datetime=format_datetime
+        # NOTE: Remove bar graph rendering in dashboard.html, add placeholder for improved stats.
     )
 
 # Patient Registration Routes
@@ -363,6 +456,11 @@ def submit():
         conn.commit()
         conn.close()
         
+        # Audit log for non-admins
+        if therapist_id:
+            therapist = get_current_therapist()
+            if therapist and therapist.get('role') != 'admin':
+                log_audit_action(therapist['id'], 'register_patient', 'patient', patient_id, f"Registered patient: {first_name} {last_name}")
         # Redirect based on whether therapist is logged in
         if therapist_id:
             flash('Patient registered successfully!', 'success')
@@ -428,6 +526,7 @@ def register_therapist_post():
     full_name = request.form.get('full_name', '').strip()
     password = request.form.get('password', '')
     confirm_password = request.form.get('confirm_password', '')
+    role = request.form.get('role', 'therapist').strip().lower()  # Default to 'therapist'
     
     # Validation
     errors = []
@@ -443,6 +542,8 @@ def register_therapist_post():
         errors.append('Passwords do not match')
     if len(password) < 6:
         errors.append('Password must be at least 6 characters long')
+    if role not in ['admin', 'therapist', 'doctor', 'nurse']:
+        errors.append('Invalid role selected')
     
     if errors:
         for error in errors:
@@ -470,19 +571,19 @@ def register_therapist_post():
     try:
         if DATABASE_URL:
             cursor.execute('''
-                INSERT INTO therapists (username, email, password_hash, full_name)
-                VALUES (%s, %s, %s, %s)
-            ''', (username, email, password_hash, full_name))
+                INSERT INTO therapists (username, email, password_hash, full_name, role)
+                VALUES (%s, %s, %s, %s, %s)
+            ''', (username, email, password_hash, full_name, role))
         else:
             cursor.execute('''
-                INSERT INTO therapists (username, email, password_hash, full_name)
-                VALUES (?, ?, ?, ?)
-            ''', (username, email, password_hash, full_name))
+                INSERT INTO therapists (username, email, password_hash, full_name, role)
+                VALUES (?, ?, ?, ?, ?)
+            ''', (username, email, password_hash, full_name, role))
         
         conn.commit()
         conn.close()
         
-        flash(f'Therapist {full_name} registered successfully!', 'success')
+        flash(f'Therapist {full_name} registered successfully as {role}!', 'success')
         return redirect(url_for('dashboard'))
         
     except Exception as e:
@@ -536,3 +637,67 @@ if __name__ == '__main__':
     debug = os.environ.get('FLASK_ENV') != 'production'
     
     app.run(host='0.0.0.0', port=port, debug=debug)
+
+@app.route('/register-doctor')
+def register_doctor():
+    return render_template('register_doctor.html')
+
+@app.route('/register-nurse')
+def register_nurse():
+    return render_template('register_nurse.html')
+
+@app.route('/therapist-directory')
+@login_required
+def therapist_directory():
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute('SELECT id, username, full_name, email FROM therapists')
+    therapists = cursor.fetchall()
+
+    # Calculate patient counts for each therapist
+    therapist_stats = []
+    now = datetime.now()
+    start_of_week = now - timedelta(days=now.weekday())
+    start_of_month = now.replace(day=1)
+    today = now.date()
+
+    for t in therapists:
+        tid = t[0]
+        # All time
+        cursor.execute('SELECT COUNT(*) FROM patients WHERE therapist_id = %s' if DATABASE_URL else 'SELECT COUNT(*) FROM patients WHERE therapist_id = ?', (tid,))
+        total = cursor.fetchone()[0]
+        # This week
+        cursor.execute('SELECT COUNT(*) FROM patients WHERE therapist_id = %s AND created_at >= %s' if DATABASE_URL else 'SELECT COUNT(*) FROM patients WHERE therapist_id = ? AND created_at >= ?', (tid, start_of_week))
+        week = cursor.fetchone()[0]
+        # This month
+        cursor.execute('SELECT COUNT(*) FROM patients WHERE therapist_id = %s AND created_at >= %s' if DATABASE_URL else 'SELECT COUNT(*) FROM patients WHERE therapist_id = ? AND created_at >= ?', (tid, start_of_month))
+        month = cursor.fetchone()[0]
+        # Today
+        cursor.execute('SELECT COUNT(*) FROM patients WHERE therapist_id = %s AND DATE(created_at) = %s' if DATABASE_URL else 'SELECT COUNT(*) FROM patients WHERE therapist_id = ? AND DATE(created_at) = ?', (tid, today))
+        today_count = cursor.fetchone()[0]
+        therapist_stats.append({
+            'id': tid,
+            'username': t[1],
+            'full_name': t[2],
+            'email': t[3],
+            'total': total,
+            'week': week,
+            'month': month,
+            'today': today_count
+        })
+    conn.close()
+    return render_template('therapist_directory.html', therapist_stats=therapist_stats)
+
+@app.route('/therapist/<int:therapist_id>')
+@login_required
+def therapist_detail(therapist_id):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute('SELECT id, username, full_name, email FROM therapists WHERE id = %s' if DATABASE_URL else 'SELECT id, username, full_name, email FROM therapists WHERE id = ?', (therapist_id,))
+    therapist = cursor.fetchone()
+    cursor.execute('SELECT id, first_name, last_name, date_of_birth, created_at FROM patients WHERE therapist_id = %s' if DATABASE_URL else 'SELECT id, first_name, last_name, date_of_birth, created_at FROM patients WHERE therapist_id = ?', (therapist_id,))
+    patients = cursor.fetchall()
+    conn.close()
+    return render_template('therapist_detail.html', therapist=therapist, patients=patients)
+
+app.jinja_env.globals.update(format_datetime=format_datetime)
