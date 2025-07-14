@@ -244,6 +244,8 @@ body {
   MAIN CONTENT AREA (Shared)
 ========================================================*/
 /* Main content layout for all non-dashboard pages: center content with flex */
+
+/* Main content layout for all non-dashboard pages: center content with flex */
 .main-content {
   width: 100vw;
   min-height: 100vh;
@@ -802,4 +804,66 @@ body {
     padding: 0.5rem;
 }
 
-/* ...rest of your unchanged CSS... */
+/* Modern Dropdown Styling for Navbar */
+.dropdown {
+    position: relative;
+    display: inline-block;
+}
+
+.dropbtn {
+    background: transparent;
+    color: #fff;
+    border: none;
+    font-size: 1rem;
+    padding: 0.7rem 1.2rem;
+    cursor: pointer;
+    outline: none;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    transition: background 0.2s;
+}
+
+.dropbtn:hover, .dropdown:focus-within .dropbtn {
+    background: #232323;
+    border-radius: 6px 6px 0 0;
+}
+
+.dropdown-content {
+    display: none;
+    position: absolute;
+    left: 0;
+    top: 100%;
+    min-width: 200px;
+    background: #232323;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+    border-radius: 0 0 8px 8px;
+    z-index: 1000;
+    flex-direction: column;
+    padding: 0.5rem 0;
+}
+
+.dropdown-content a {
+    color: #fff;
+    padding: 0.8rem 1.2rem;
+    text-decoration: none;
+    display: block;
+    transition: background 0.18s, color 0.18s;
+    font-size: 1rem;
+}
+
+.dropdown-content a:hover {
+    background: #187ee7;
+    color: #fff;
+}
+
+.dropdown:hover .dropdown-content,
+.dropdown:focus-within .dropdown-content {
+    display: block;
+}
+
+/* Prevent dropdown from pushing content */
+.top-navbar {
+    position: relative;
+    z-index: 10;
+}
