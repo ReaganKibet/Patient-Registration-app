@@ -15,9 +15,20 @@
         </div>
         <div class="navbar-center">
             <a href="{{ url_for('dashboard') }}" class="nav-link {% if request.path == url_for('dashboard') %}active{% endif %}"><i class="fas fa-tachometer-alt"></i> Dashboard</a>
-            <a href="{{ url_for('register_therapist') }}" class="nav-link"><i class="fas fa-user-plus"></i> Register Therapist</a>
+            
+            <div class="dropdown">
+                <button class="dropbtn">
+                    <i class="fas fa-user-plus"></i> Register User <i class="fas fa-caret-down"></i>
+                </button>
+                <div class="dropdown-content">
+                    <a href="{{ url_for('register_therapist') }}">Register Therapist</a>
+                    <a href="{{ url_for('register_doctor') }}">Register Doctor</a>
+                    <a href="{{ url_for('register_nurse') }}">Register Nurse</a>
+                </div>
+            </div>
+            
             <a href="{{ url_for('index') }}" class="nav-link"><i class="fas fa-user-edit"></i> Register Patient</a>
-            <a href="#" class="nav-link"><i class="fas fa-address-book"></i> Therapist Directory</a>
+            <a href="{{ url_for('therapist_directory') }}" class="nav-link"><i class="fas fa-address-book"></i> Therapist Directory</a>
             <a href="#" class="nav-link"><i class="fas fa-calendar-alt"></i> Appointments</a>
             <a href="#" class="nav-link"><i class="fas fa-chart-line"></i> Reports</a>
             <a href="#" class="nav-link"><i class="fas fa-cog"></i> Settings</a>
