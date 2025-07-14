@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="dashboard-container main-content">
+    <div class="list-card">
+        <div class="list-card-header">
+            <i class="fas fa-user-md"></i>
+            <h2>Therapist Directory</h2>
+        </div>
+        <div class="table-responsive">
+            <table class="styled-table wide-table">
+                <thead>
+                    <tr>
+                        <th>Full Name</th>
+                        <th>Username</th>
+                        <th>Email</th>
+                        <th>Patients (All)</th>
+                        <th>This Week</th>
+                        <th>This Month</th>
+                        <th>Today</th>
+                        <th>View</th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% for t in therapist_stats %}
+                    <tr>
+                        <td>{{ t.full_name }}</td>
+                        <td>{{ t.username }}</td>
+                        <td>{{ t.email }}</td>
+                        <td>{{ t.total }}</td>
+                        <td>{{ t.week }}</td>
+                        <td>{{ t.month }}</td>
+                        <td>{{ t.today }}</td>
+                        <td>
+                            <a href="{{ url_for('therapist_detail', therapist_id=t.id) }}" class="btn btn-xs btn-primary">View</a>
+                        </td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
+    <div class="sidebar">
+        <div class="sidebar-header">
+            <h2>Therapist Directory</h2>
+        </div>
+        <nav class="sidebar-nav">
+            <a href="{{ url_for('index') }}"><i class="fas fa-home"></i> Home</a>
+            <a href="{{ url_for('register_therapist') }}"><i class="fas fa-user-plus"></i> Register Therapist</a>
+            <a href="{{ url_for('therapist_directory') }}" class="active"><i class="fas fa-address-book"></i> Therapist Directory</a>
+            <a href="{{ url_for('appointments') }}"><i class="fas fa-calendar-alt"></i> Appointments</a>
+            <a href="{{ url_for('help_center') }}"><i class="fas fa-question-circle"></i> Help Center</a>
+        </nav>
+        <div class="sidebar-footer">
+            <div class="sidebar-user-info">
+                <i class="fas fa-user-circle"></i>
+                <span>
+                    {% if current_therapist %}
+    {{ 'Admin' if current_therapist.username == 'admin' else current_therapist.full_name }}
+{% endif %}
+                </span>
+            </div>
+        </div>
+    </div>
