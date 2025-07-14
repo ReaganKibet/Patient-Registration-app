@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="dashboard-container main-content">
+    <div class="list-card">
+        <div class="list-card-header">
+            <i class="fas fa-user-md"></i>
+            <h2>Patients for {{ therapist[2] }}</h2>
+        </div>
+        <div class="table-responsive">
+            <table class="styled-table wide-table">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>First Name</th>
+                        <th>Last Name</th>
+                        <th>Date of Birth</th>
+                        <th>Registered</th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% for p in patients %}
+                    <tr>
+                        <td>{{ p[0] }}</td>
+                        <td>{{ p[1] }}</td>
+                        <td>{{ p[2] }}</td>
+                        <td>{{ p[3] }}</td>
+                        <td>{{ format_datetime(p[4]) }}</td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <a href="{{ url_for('therapist_directory') }}" class="btn btn-secondary">Back to Directory</a>
+    </div>
+</div>
+{% endblock %}
+        </span>
+            </div>
+        </div>
+    </div>
