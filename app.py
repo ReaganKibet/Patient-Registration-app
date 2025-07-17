@@ -479,7 +479,6 @@ def submit():
                 "last_name": last_name,
                 "date_of_birth": date_of_birth,
                 "therapist_name": therapist_name,
-                "therapist_id": therapist_id,
                 "created_at": datetime.now().isoformat()
             }
             response = supabase.table("patients").insert(supabase_data).execute()
