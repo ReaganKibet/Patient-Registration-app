@@ -10,12 +10,8 @@ services:
       - key: SECRET_KEY
         generateValue: true
       - key: DATABASE_URL
-        fromService:
-          type: pserv
-          name: clinic-db
-          property: connectionString
-  
-  - type: pserv
-    name: clinic-db
-    env: docker
-    plan: free
+        value: postgresql://postgres:flique0069@db.calonrnubssdzaexhdnk.supabase.co:5432/postgres
+      - key: SUPABASE_URL
+        value: https://tfrenmmjqfvgpdzlcxgt.supabase.co
+      - key: SUPABASE_KEY
+        value: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRmcmVubW1qcWZ2Z3BkemxjeGd0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI3NDMxNDksImV4cCI6MjA2ODMxOTE0OX0.NWy-y8SeiHQEEw3AWX08gKIVfgQYnqY4RKPTiu75QTk

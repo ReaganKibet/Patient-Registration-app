@@ -8,9 +8,19 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from functools import wraps
 import secrets
 from collections import Counter
+from dotenv import load_dotenv
+from supabase import create_client, Client
 
 app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY', 'dev-secret-key-change-in-production')
+
+# Load environment variables from .env file
+load_dotenv()
+
+SUPABASE_URL = os.getenv("SUPABASE_URL")
+SUPABASE_KEY = os.getenv("SUPABASE_KEY")
+
+supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 # Database configuration - support both SQLite (local) and PostgreSQL (production)
 DATABASE_URL = os.environ.get('DATABASE_URL')
@@ -340,6 +350,15 @@ def dashboard():
     cursor.execute('SELECT a.id, a.appointment_time, p.first_name, p.last_name, t.full_name FROM appointments a JOIN patients p ON a.patient_id = p.id LEFT JOIN therapists t ON a.therapist_id = t.id WHERE a.appointment_time >= %s AND a.appointment_time < %s ORDER BY a.appointment_time ASC' if DATABASE_URL else 'SELECT a.id, a.appointment_time, p.first_name, p.last_name, t.full_name FROM appointments a JOIN patients p ON a.patient_id = p.id LEFT JOIN therapists t ON a.therapist_id = t.id WHERE a.appointment_time >= ? AND a.appointment_time < ? ORDER BY a.appointment_time ASC', (datetime.now(), datetime.now() + timedelta(days=7)))
     upcoming_appointments = cursor.fetchall()
 
+    # Fetch patients from Supabase (cloud)
+    supabase_patients = []
+    try:
+        response = supabase.table("patients").select("*").execute()
+        if response.data:
+            supabase_patients = response.data
+    except Exception as e:
+        print(f"Supabase fetch error: {e}")
+
     # Only admin sees summaries and user lists
     weekly_labels, weekly_counts, month_labels, month_counts, therapists, user_lists = [], [], [], [], [], []
     if is_admin(therapist):
@@ -394,6 +413,7 @@ def dashboard():
         therapist=therapist,
         therapists=therapists if is_admin(therapist) else [],
         patients=patients,
+        supabase_patients=supabase_patients,
         daily_registrations=daily_registrations,
         upcoming_appointments=upcoming_appointments,
         weekly_labels=weekly_labels,
@@ -434,28 +454,40 @@ def submit():
     therapist_id = session.get('therapist_id')
     
     try:
-        # Store in database
+        # Store in local database (existing logic)
         conn = get_db_connection()
         cursor = conn.cursor()
-        
         if DATABASE_URL:
-            # PostgreSQL - use RETURNING to get the ID
             cursor.execute('''
                 INSERT INTO patients (first_name, last_name, date_of_birth, therapist_name, therapist_id)
                 VALUES (%s, %s, %s, %s, %s) RETURNING id
             ''', (first_name, last_name, date_of_birth, therapist_name, therapist_id))
             patient_id = cursor.fetchone()[0]
         else:
-            # SQLite - use lastrowid
             cursor.execute('''
                 INSERT INTO patients (first_name, last_name, date_of_birth, therapist_name, therapist_id)
                 VALUES (?, ?, ?, ?, ?)
             ''', (first_name, last_name, date_of_birth, therapist_name, therapist_id))
             patient_id = cursor.lastrowid
-            
         conn.commit()
         conn.close()
-        
+
+        # Also store in Supabase (cloud)
+        try:
+            supabase_data = {
+                "first_name": first_name,
+                "last_name": last_name,
+                "date_of_birth": date_of_birth,
+                "therapist_name": therapist_name,
+                "therapist_id": therapist_id,
+                "created_at": datetime.now().isoformat()
+            }
+            response = supabase.table("patients").insert(supabase_data).execute()
+            if response.error:
+                print(f"Supabase insert error: {response.error}")
+        except Exception as supabase_error:
+            print(f"Supabase error: {supabase_error}")
+
         # Audit log for non-admins
         if therapist_id:
             therapist = get_current_therapist()
@@ -467,7 +499,7 @@ def submit():
             return redirect(url_for('dashboard'))
         else:
             return redirect(url_for('confirmation', patient_id=patient_id))
-        
+
     except Exception as e:
         print(f"Database error: {e}")
         flash('An error occurred while saving the patient information', 'error')
@@ -629,7 +661,11 @@ def confirmation_simple():
     return render_template('confirmation.html', patient=None)
 
 # Initialize database on app startup
-init_db()
+try:
+    init_db()
+except Exception as e:
+    print(f"Database initialization failed: {e}")
+    # Optionally, log this error or notify admin
 
 if __name__ == '__main__':
     # Configure for production deployment
