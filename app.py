@@ -613,7 +613,24 @@ def register_therapist_post():
         
         conn.commit()
         conn.close()
-        
+
+        # Also store in Supabase (cloud)
+        try:
+            supabase_data = {
+                "username": username,
+                "email": email,
+                "password_hash": password_hash,
+                "full_name": full_name,
+                "role": role,
+                "is_active": True,
+                "created_at": datetime.now().isoformat()
+            }
+            response = supabase.table("therapists").insert(supabase_data).execute()
+            if response.status_code != 201:
+                print(f"Supabase insert error: {response.data}")
+        except Exception as supabase_error:
+            print(f"Supabase error: {supabase_error}")
+
         flash(f'Therapist {full_name} registered successfully as {role}!', 'success')
         return redirect(url_for('dashboard'))
         
