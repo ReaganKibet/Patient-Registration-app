@@ -359,6 +359,15 @@ def dashboard():
     except Exception as e:
         print(f"Supabase fetch error: {e}")
 
+    # Fetch therapists from Supabase (cloud)
+    supabase_therapists = []
+    try:
+        response = supabase.table("therapists").select("*").execute()
+        if response.data:
+            supabase_therapists = response.data
+    except Exception as e:
+        print(f"Supabase therapists fetch error: {e}")
+
     # Only admin sees summaries and user lists
     weekly_labels, weekly_counts, month_labels, month_counts, therapists, user_lists = [], [], [], [], [], []
     if is_admin(therapist):
@@ -414,6 +423,7 @@ def dashboard():
         therapists=therapists if is_admin(therapist) else [],
         patients=patients,
         supabase_patients=supabase_patients,
+        supabase_therapists=supabase_therapists,
         daily_registrations=daily_registrations,
         upcoming_appointments=upcoming_appointments,
         weekly_labels=weekly_labels,
