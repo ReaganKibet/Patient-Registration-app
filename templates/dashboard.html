@@ -235,6 +235,22 @@
                     </div>
                 </div>
             </section>
+            <!-- Supabase Patients List -->
+            <section class="dashboard-list-section">
+                <div class="list-card">
+                    <div class="list-card-header">
+                        <i class="fas fa-database"></i>
+                        <h2>Supabase Patients</h2>
+                    </div>
+                    <div class="table-responsive">
+                        <ul>
+                          {% for patient in supabase_patients %}
+                            <li>{{ patient.first_name }} {{ patient.last_name }} (DOB: {{ patient.date_of_birth }})</li>
+                          {% endfor %}
+                        </ul>
+                    </div>
+                </div>
+            </section>
         </main>
     </div>
     <!-- Chart.js CDN -->
