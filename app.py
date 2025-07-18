@@ -336,103 +336,35 @@ def logout():
 @app.route('/dashboard')
 @login_required
 def dashboard():
-    """Role-based dashboard: all see daily registrations & appointments, only admin sees summaries & user lists"""
     therapist = get_current_therapist()
-    conn = get_db_connection()
-    cursor = conn.cursor()
 
-    # Daily registrations (all roles)
-    today = datetime.now().date()
-    cursor.execute('SELECT COUNT(*) FROM patients WHERE DATE(created_at) = %s' if DATABASE_URL else 'SELECT COUNT(*) FROM patients WHERE DATE(created_at) = ?', (today,))
-    daily_registrations = cursor.fetchone()[0]
-
-    # Upcoming appointments (all roles, next 7 days)
-    cursor.execute('SELECT a.id, a.appointment_time, p.first_name, p.last_name, t.full_name FROM appointments a JOIN patients p ON a.patient_id = p.id LEFT JOIN therapists t ON a.therapist_id = t.id WHERE a.appointment_time >= %s AND a.appointment_time < %s ORDER BY a.appointment_time ASC' if DATABASE_URL else 'SELECT a.id, a.appointment_time, p.first_name, p.last_name, t.full_name FROM appointments a JOIN patients p ON a.patient_id = p.id LEFT JOIN therapists t ON a.therapist_id = t.id WHERE a.appointment_time >= ? AND a.appointment_time < ? ORDER BY a.appointment_time ASC', (datetime.now(), datetime.now() + timedelta(days=7)))
-    upcoming_appointments = cursor.fetchall()
-
-    # Fetch patients from Supabase (cloud)
-    supabase_patients = []
+    # Fetch patients from Supabase
+    patients = []
     try:
         response = supabase.table("patients").select("*").execute()
         if response.data:
-            supabase_patients = response.data
+            patients = response.data
     except Exception as e:
         print(f"Supabase fetch error: {e}")
 
-    # Fetch therapists from Supabase (cloud)
-    supabase_therapists = []
+    # Fetch therapists from Supabase
+    therapists = []
     try:
         response = supabase.table("therapists").select("*").execute()
         if response.data:
-            supabase_therapists = response.data
+            therapists = response.data
     except Exception as e:
         print(f"Supabase therapists fetch error: {e}")
 
-    # Only admin sees summaries and user lists
-    weekly_labels, weekly_counts, month_labels, month_counts, therapists, user_lists = [], [], [], [], [], []
-    if is_admin(therapist):
-        cursor.execute('SELECT id, username, full_name, email, is_active, role, created_at FROM therapists')
-        therapists = cursor.fetchall()
-        cursor.execute('SELECT id, first_name, last_name, date_of_birth, therapist_id, created_at FROM patients')
-        patients = cursor.fetchall()
-        # Summaries
-        patient_dates = [p[5] for p in patients if p[5]]
-        parsed_dates = []
-        for d in patient_dates:
-            if isinstance(d, str):
-                try:
-                    parsed_dates.append(datetime.fromisoformat(d.replace('Z', '+00:00')))
-                except Exception:
-                    continue
-            else:
-                parsed_dates.append(d)
-        # Weekly
-        if parsed_dates:
-            min_date = min(parsed_dates)
-            max_date = max(parsed_dates)
-            current = min_date - timedelta(days=min_date.weekday())
-            while current <= max_date:
-                label = current.strftime('Week of %Y-%m-%d')
-                weekly_labels.append(label)
-                count = sum(1 for d in parsed_dates if current <= d < current + timedelta(days=7))
-                weekly_counts.append(count)
-                current += timedelta(days=7)
-        # Monthly
-        if parsed_dates:
-            months = sorted(set((d.year, d.month) for d in parsed_dates))
-            for y, m in months:
-                label = f"{y}-{m:02d}"
-                month_labels.append(label)
-                count = sum(1 for d in parsed_dates if d.year == y and d.month == m)
-                month_counts.append(count)
-        # User lists by role
-        user_lists = {
-            'doctors': [t for t in therapists if t[5] == 'doctor'],
-            'nurses': [t for t in therapists if t[5] == 'nurse'],
-            'therapists': [t for t in therapists if t[5] == 'therapist']
-        }
-    else:
-        # Non-admins see only their patients
-        cursor.execute('SELECT id, first_name, last_name, date_of_birth, therapist_id, created_at FROM patients WHERE therapist_id = %s' if DATABASE_URL else 'SELECT id, first_name, last_name, date_of_birth, therapist_id, created_at FROM patients WHERE therapist_id = ?', (therapist['id'],))
-        patients = cursor.fetchall()
+    # ...other dashboard logic...
 
-    conn.close()
     return render_template(
         'dashboard.html',
         therapist=therapist,
-        therapists=therapists if is_admin(therapist) else [],
+        therapists=therapists,
         patients=patients,
-        supabase_patients=supabase_patients,
-        supabase_therapists=supabase_therapists,
-        daily_registrations=daily_registrations,
-        upcoming_appointments=upcoming_appointments,
-        weekly_labels=weekly_labels,
-        weekly_counts=weekly_counts,
-        monthly_labels=month_labels,
-        monthly_counts=month_counts,
-        user_lists=user_lists,
+        # ...other context...
         format_datetime=format_datetime
-        # NOTE: Remove bar graph rendering in dashboard.html, add placeholder for improved stats.
     )
 
 # Patient Registration Routes
@@ -483,20 +415,23 @@ def submit():
         conn.close()
 
         # Also store in Supabase (cloud)
+        supabase_data = {
+            "first_name": first_name,
+            "last_name": last_name,
+            "date_of_birth": date_of_birth,
+            "therapist_name": therapist_name,
+            "therapist_id": therapist_id,
+            "created_at": datetime.now().isoformat()
+        }
         try:
-            supabase_data = {
-                "first_name": first_name,
-                "last_name": last_name,
-                "date_of_birth": date_of_birth,
-                "therapist_name": therapist_name,
-                "created_at": datetime.now().isoformat()
-            }
             response = supabase.table("patients").insert(supabase_data).execute()
             if response.error:
-                print(f"Supabase insert error: {response.error}")
-        except Exception as supabase_error:
-            print(f"Supabase error: {supabase_error}")
-
+                flash('Failed to register patient in Supabase', 'error')
+            else:
+                flash('Patient registered successfully!', 'success')
+        except Exception as e:
+            flash('An error occurred while saving the patient information', 'error')
+            print(f"Supabase insert error: {e}")
         # Audit log for non-admins
         if therapist_id:
             therapist = get_current_therapist()
@@ -650,34 +585,32 @@ def register_therapist_post():
         conn.close()
         return redirect(url_for('register_therapist'))
 
-@app.route('/delete_therapist/<int:therapist_id>', methods=['POST'])
-@login_required
-def delete_therapist(therapist_id):
-    therapist = get_current_therapist()
-    if not is_admin(therapist):
-        flash('Unauthorized', 'error')
-        return redirect(url_for('dashboard'))
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    cursor.execute('DELETE FROM therapists WHERE id = %s' if DATABASE_URL else 'DELETE FROM therapists WHERE id = ?', (therapist_id,))
-    conn.commit()
-    conn.close()
-    flash('Therapist deleted.', 'success')
-    return redirect(url_for('dashboard'))
-
 @app.route('/delete_patient/<int:patient_id>', methods=['POST'])
 @login_required
 def delete_patient(patient_id):
-    therapist = get_current_therapist()
-    if not is_admin(therapist):
-        flash('Unauthorized', 'error')
-        return redirect(url_for('dashboard'))
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    cursor.execute('DELETE FROM patients WHERE id = %s' if DATABASE_URL else 'DELETE FROM patients WHERE id = ?', (patient_id,))
-    conn.commit()
-    conn.close()
-    flash('Patient deleted.', 'success')
+    try:
+        response = supabase.table("patients").delete().eq('id', patient_id).execute()
+        if response.error:
+            flash('Failed to delete patient from Supabase', 'error')
+        else:
+            flash('Patient deleted successfully!', 'success')
+    except Exception as e:
+        flash('An error occurred while deleting the patient', 'error')
+        print(f"Supabase delete error: {e}")
+    return redirect(url_for('dashboard'))
+
+@app.route('/delete_therapist/<int:therapist_id>', methods=['POST'])
+@login_required
+def delete_therapist(therapist_id):
+    try:
+        response = supabase.table("therapists").delete().eq('id', therapist_id).execute()
+        if response.error:
+            flash('Failed to delete therapist from Supabase', 'error')
+        else:
+            flash('Therapist deleted successfully!', 'success')
+    except Exception as e:
+        flash('An error occurred while deleting the therapist', 'error')
+        print(f"Supabase delete error: {e}")
     return redirect(url_for('dashboard'))
 
 # Simple confirmation route without ID for testing

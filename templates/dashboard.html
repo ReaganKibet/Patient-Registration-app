@@ -160,23 +160,24 @@
                                     <th>Delete</th>
                                 </tr>
                             </thead>
+                            <!-- Therapists Table -->
                             <tbody>
                             {% for t in therapists %}
                                 <tr>
-                                    <td>{{ t[0] }}</td>
-                                    <td>{{ t[1] }}</td>
-                                    <td>{{ t[2] }}</td>
-                                    <td>{{ t[3] }}</td>
+                                    <td>{{ t.id }}</td>
+                                    <td>{{ t.username }}</td>
+                                    <td>{{ t.full_name }}</td>
+                                    <td>{{ t.email }}</td>
                                     <td>
-                                        {% if t[4] %}
+                                        {% if t.is_active %}
                                             <span class="badge badge-success">Yes</span>
                                         {% else %}
                                             <span class="badge badge-danger">No</span>
                                         {% endif %}
                                     </td>
-                                    <td>{{ format_datetime(t[5]) }}</td>
+                                    <td>{{ format_datetime(t.created_at) }}</td>
                                     <td>
-                                        <form action="{{ url_for('delete_therapist', therapist_id=t[0]) }}" method="post" onsubmit="return confirm('Delete this therapist?');">
+                                        <form action="{{ url_for('delete_therapist', therapist_id=t.id) }}" method="post" onsubmit="return confirm('Delete this therapist?');">
                                             <button type="submit" class="danger-btn"><i class="fas fa-trash"></i></button>
                                         </form>
                                     </td>
@@ -215,19 +216,17 @@
                             <tbody>
                             {% for p in patients %}
                                 <tr>
-                                    <td>{{ p[0] }}</td>
-                                    <td>{{ p[1] }}</td>
-                                    <td>{{ p[2] }}</td>
-                                    <td>{{ p[3] }}</td>
-                                    <td>{{ p[4] }}</td>
-                                    <td>{{ format_datetime(p[5]) }}</td>
-                                    {% if therapists %}
+                                    <td>{{ p.id }}</td>
+                                    <td>{{ p.first_name }}</td>
+                                    <td>{{ p.last_name }}</td>
+                                    <td>{{ p.date_of_birth }}</td>
+                                    <td>{{ p.therapist_id }}</td>
+                                    <td>{{ format_datetime(p.created_at) }}</td>
                                     <td>
-                                        <form action="{{ url_for('delete_patient', patient_id=p[0]) }}" method="post" onsubmit="return confirm('Delete this patient?');">
+                                        <form action="{{ url_for('delete_patient', patient_id=p.id) }}" method="post" onsubmit="return confirm('Delete this patient?');">
                                             <button type="submit" class="danger-btn"><i class="fas fa-trash"></i></button>
                                         </form>
                                     </td>
-                                    {% endif %}
                                 </tr>
                             {% endfor %}
                             </tbody>
