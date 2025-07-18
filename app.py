@@ -283,48 +283,25 @@ def log_audit_action(user_id, action, target_type=None, target_id=None, details=
     conn.close()
 
 # Authentication Routes
-@app.route('/login')
+@app.route('/login', methods=['GET', 'POST'])
 def login():
-    """Display login form"""
+    if request.method == 'POST':
+        username = request.form['username']
+        password = request.form['password']
+        # Fetch therapist from Supabase
+        response = supabase.table("therapists").select("*").eq("username", username).single().execute()
+        therapist = response.data
+        if therapist and check_password_hash(therapist['password_hash'], password):
+            session['therapist_id'] = therapist['id']
+            session['therapist_name'] = therapist['full_name']
+            session['role'] = therapist['role']
+            if therapist['role'] == 'admin':
+                return redirect(url_for('admin_dashboard'))
+            else:
+                return redirect(url_for('dashboard'))
+        else:
+            flash('Invalid credentials', 'error')
     return render_template('login.html')
-
-@app.route('/login', methods=['POST'])
-def login_post():
-    """Process login form"""
-    username = request.form.get('username', '').strip()
-    password = request.form.get('password', '')
-    
-    if not username or not password:
-        flash('Please enter both username and password.', 'error')
-        return redirect(url_for('login'))
-    
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    
-    cursor.execute('''
-        SELECT id, password_hash, full_name, is_active FROM therapists 
-        WHERE username = %s
-    ''' if DATABASE_URL else '''
-        SELECT id, password_hash, full_name, is_active FROM therapists 
-        WHERE username = ?
-    ''', (username,))
-    
-    therapist = cursor.fetchone()
-    conn.close()
-    
-    if therapist and check_password_hash(therapist[1], password):
-        if not therapist[3]:  # Check if account is active
-            flash('Your account has been deactivated. Please contact an administrator.', 'error')
-            return redirect(url_for('login'))
-        
-        # Login successful
-        session['therapist_id'] = therapist[0]
-        session['therapist_name'] = therapist[2]
-        flash(f'Welcome back, {therapist[2]}!', 'success')
-        return redirect(url_for('dashboard'))
-    else:
-        flash('Invalid username or password.', 'error')
-        return redirect(url_for('login'))
 
 @app.route('/logout')
 def logout():
@@ -336,48 +313,17 @@ def logout():
 @app.route('/dashboard')
 @login_required
 def dashboard():
-    therapist = get_current_therapist()
-
-    # Fetch patients from Supabase
+    therapist_id = session.get('therapist_id')
+    therapist_name = session.get('therapist_name')
+    # Fetch only this therapist's patients
     patients = []
     try:
-        response = supabase.table("patients").select("*").execute()
+        response = supabase.table("patients").select("*").eq("therapist_id", therapist_id).execute()
         if response.data:
             patients = response.data
     except Exception as e:
         print(f"Supabase fetch error: {e}")
-
-    # Fetch therapists from Supabase
-    therapists = []
-    try:
-        response = supabase.table("therapists").select("*").execute()
-        if response.data:
-            therapists = response.data
-    except Exception as e:
-        print(f"Supabase therapists fetch error: {e}")
-
-    # ...other dashboard logic...
-
-    #define weekly and monthly labels/counts
-    weekly_labels = []
-    weekly_counts = []
-    monthly_labels = []
-    monthly_counts = []
-
-    # If you want to compute actual stats, add your logic here.
-    # For now, they are empty lists to avoid the NameError.
-
-    return render_template(
-        'dashboard.html',
-        therapist=therapist,
-        therapists=therapists,
-        patients=patients,
-        weekly_labels=weekly_labels,
-        weekly_counts=weekly_counts,
-        monthly_labels=monthly_labels,
-        monthly_counts=monthly_counts,
-        format_datetime=format_datetime
-    )
+    return render_template('dashboard.html', therapist_name=therapist_name, patients=patients)
 
 # Patient Registration Routes
 @app.route('/')
@@ -706,5 +652,24 @@ def therapist_detail(therapist_id):
     patients = cursor.fetchall()
     conn.close()
     return render_template('therapist_detail.html', therapist=therapist, patients=patients)
+
+@app.route('/admin/dashboard')
+@login_required
+def admin_dashboard():
+    if session.get('role') != 'admin':
+        flash('Unauthorized', 'error')
+        return redirect(url_for('login'))
+    therapists = []
+    patients = []
+    try:
+        t_response = supabase.table("therapists").select("*").execute()
+        p_response = supabase.table("patients").select("*").execute()
+        if t_response.data:
+            therapists = t_response.data
+        if p_response.data:
+            patients = p_response.data
+    except Exception as e:
+        print(f"Supabase fetch error: {e}")
+    return render_template('admin_dashboard.html', therapists=therapists, patients=patients)
 
 app.jinja_env.globals.update(format_datetime=format_datetime)

@@ -4,7 +4,7 @@
     <div class="list-card">
         <div class="list-card-header">
             <i class="fas fa-user-md"></i>
-            <h2>Patients for {{ therapist[2] }}</h2>
+            <h2>Patients for {{ therapist.full_name }}</h2>
         </div>
         <div class="table-responsive">
             <table class="styled-table wide-table">
@@ -20,11 +20,11 @@
                 <tbody>
                 {% for p in patients %}
                     <tr>
-                        <td>{{ p[0] }}</td>
-                        <td>{{ p[1] }}</td>
-                        <td>{{ p[2] }}</td>
-                        <td>{{ p[3] }}</td>
-                        <td>{{ format_datetime(p[4]) }}</td>
+                        <td>{{ p.id }}</td>
+                        <td>{{ p.first_name }}</td>
+                        <td>{{ p.last_name }}</td>
+                        <td>{{ p.date_of_birth }}</td>
+                        <td>{{ format_datetime(p.created_at) }}</td>
                     </tr>
                 {% endfor %}
                 </tbody>
@@ -34,7 +34,3 @@
     </div>
 </div>
 {% endblock %}
-        </span>
-            </div>
-        </div>
-    </div>

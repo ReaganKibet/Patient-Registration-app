@@ -58,10 +58,7 @@
                     </div>
                     <div class="welcome-text">
                         <h2>
-                            Welcome,
-                            <span class="dashboard-user-highlight">
-                                {{ therapist.full_name or 'Admin' }}!
-                            </span>
+                            Welcome back, {{ therapist_name }}!
                         </h2>
                         <span class="role-label">
                             {{ 'Admin' if therapist and therapist.username == 'admin' else 'Therapist' }}
