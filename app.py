@@ -358,12 +358,24 @@ def dashboard():
 
     # ...other dashboard logic...
 
+    #define weekly and monthly labels/counts
+    weekly_labels = []
+    weekly_counts = []
+    monthly_labels = []
+    monthly_counts = []
+
+    # If you want to compute actual stats, add your logic here.
+    # For now, they are empty lists to avoid the NameError.
+
     return render_template(
         'dashboard.html',
         therapist=therapist,
         therapists=therapists,
         patients=patients,
-        # ...other context...
+        weekly_labels=weekly_labels,
+        weekly_counts=weekly_counts,
+        monthly_labels=monthly_labels,
+        monthly_counts=monthly_counts,
         format_datetime=format_datetime
     )
 
