@@ -323,7 +323,12 @@ def dashboard():
             patients = response.data
     except Exception as e:
         print(f"Supabase fetch error: {e}")
-    return render_template('dashboard.html', therapist_name=therapist_name, patients=patients)
+    weekly_labels = [...]  # however you generate this
+    return render_template(
+        'dashboard.html',
+        therapist_name=therapist_name,
+        patients=patients,
+        weekly_labels=weekly_labels,  
 
 # Patient Registration Routes
 @app.route('/')
