@@ -338,12 +338,27 @@ def dashboard():
                 pass
     weekly_counts = [date_counts.get(day, 0) for day in weekly_labels]
 
+    # Labels and counts for the last 30 days (monthly)
+    monthly_labels = [(datetime.now() - timedelta(days=i)).strftime('%Y-%m-%d') for i in range(30)][::-1]
+    monthly_date_counts = Counter()
+    for p in patients:
+        created_at = p.get('created_at')
+        if created_at:
+            try:
+                date = datetime.fromisoformat(created_at[:10]).strftime('%Y-%m-%d')
+                monthly_date_counts[date] += 1
+            except Exception:
+                pass
+    monthly_counts = [monthly_date_counts.get(day, 0) for day in monthly_labels]
+
     return render_template(
         'dashboard.html',
         therapist_name=therapist_name,
         patients=patients,
         weekly_labels=weekly_labels,
-        weekly_counts=weekly_counts
+        weekly_counts=weekly_counts,
+        monthly_labels=monthly_labels,
+        monthly_counts=monthly_counts
     )
 
 # Patient Registration Routes
