@@ -328,7 +328,8 @@ def dashboard():
         'dashboard.html',
         therapist_name=therapist_name,
         patients=patients,
-        weekly_labels=weekly_labels,  
+        weekly_labels=weekly_labels
+    )
 
 # Patient Registration Routes
 @app.route('/')
