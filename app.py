@@ -288,19 +288,24 @@ def login():
     if request.method == 'POST':
         username = request.form['username']
         password = request.form['password']
-        # Fetch therapist from Supabase
-        response = supabase.table("therapists").select("*").eq("username", username).single().execute()
-        therapist = response.data
-        if therapist and check_password_hash(therapist['password_hash'], password):
-            session['therapist_id'] = therapist['id']
-            session['therapist_name'] = therapist['full_name']
-            session['role'] = therapist['role']
-            if therapist['role'] == 'admin':
-                return redirect(url_for('admin_dashboard'))
+        try:
+            # Remove .single() to avoid APIError on 0 rows
+            response = supabase.table("therapists").select("*").eq("username", username).execute()
+            therapist = None
+            if response.data and len(response.data) == 1:
+                therapist = response.data[0]
+            if therapist and check_password_hash(therapist['password_hash'], password):
+                session['therapist_id'] = therapist['id']
+                session['therapist_name'] = therapist['full_name']
+                session['role'] = therapist['role']
+                if therapist['role'] == 'admin':
+                    return redirect(url_for('admin_dashboard'))
+                else:
+                    return redirect(url_for('dashboard'))
             else:
-                return redirect(url_for('dashboard'))
-        else:
-            flash('Invalid credentials', 'error')
+                flash('Invalid credentials', 'error')
+        except Exception as e:
+            flash('Login error: ' + str(e), 'error')
     return render_template('login.html')
 
 @app.route('/logout')
