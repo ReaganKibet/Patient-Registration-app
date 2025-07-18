@@ -315,7 +315,6 @@ def logout():
 def dashboard():
     therapist_id = session.get('therapist_id')
     therapist_name = session.get('therapist_name')
-    # Fetch only this therapist's patients
     patients = []
     try:
         response = supabase.table("patients").select("*").eq("therapist_id", therapist_id).execute()
@@ -323,12 +322,28 @@ def dashboard():
             patients = response.data
     except Exception as e:
         print(f"Supabase fetch error: {e}")
+
+    # Labels for the last 7 days
     weekly_labels = [(datetime.now() - timedelta(days=i)).strftime('%A') for i in range(7)][::-1]
+
+    # Count patients per day for the last 7 days
+    date_counts = Counter()
+    for p in patients:
+        created_at = p.get('created_at')
+        if created_at:
+            try:
+                date = datetime.fromisoformat(created_at[:10]).strftime('%A')
+                date_counts[date] += 1
+            except Exception:
+                pass
+    weekly_counts = [date_counts.get(day, 0) for day in weekly_labels]
+
     return render_template(
         'dashboard.html',
         therapist_name=therapist_name,
         patients=patients,
-        weekly_labels=weekly_labels
+        weekly_labels=weekly_labels,
+        weekly_counts=weekly_counts
     )
 
 # Patient Registration Routes
