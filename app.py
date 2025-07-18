@@ -323,7 +323,7 @@ def dashboard():
             patients = response.data
     except Exception as e:
         print(f"Supabase fetch error: {e}")
-    weekly_labels = [...]  # however you generate this
+    weekly_labels = [(datetime.now() - timedelta(days=i)).strftime('%A') for i in range(7)][::-1]
     return render_template(
         'dashboard.html',
         therapist_name=therapist_name,
